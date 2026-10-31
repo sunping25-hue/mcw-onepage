@@ -81,3 +81,7 @@ body{margin:0;background:#050b24 radial-gradient(ellipse at top,#0b1d55,#050b24 
 @media (max-width:760px){.fab .f-emoji{width:46px;height:46px}.fab .f-emoji em{font-size:22px}}
 .fab .f-emoji{background:linear-gradient(#ff7a3d,#e8380d)!important;border:2px solid #fff}.fab .f-emoji .mob{width:32px;height:32px}
 @media (max-width:760px){.fab .f-emoji .mob{width:28px;height:28px}}
+.vctl{position:absolute;right:2%;bottom:6%;display:flex;gap:8px;z-index:3}.vctl button{font:inherit;font-weight:800;font-size:clamp(12px,2.2vw,18px);padding:.45em .9em;border-radius:999px;border:1px solid #ffe08a;background:rgba(10,15,40,.8);color:#ffe08a;cursor:pointer;white-space:nowrap}.vctl button:hover{filter:brightness(1.15)}#vSound:not(.on){animation:hintPulse 1.8s ease-in-out infinite}#vSound.on{background:#ffe08a;color:#0a1847}#factoryVideo{cursor:pointer}
+.fab .f-landline{width:54px;height:54px;padding:0;justify-content:center;border-radius:50%;align-self:flex-end}.fab .f-landline svg{width:28px;height:28px}
+@media (max-width:760px){.fab .f-landline{width:46px;height:46px}.fab .f-landline svg{width:22px;height:22px}}
+.vctl{gap:6px;right:2%;bottom:5%}.vctl button{font-size:12px;padding:.35em .75em;font-weight:700}
