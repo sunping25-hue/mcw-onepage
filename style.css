@@ -89,3 +89,4 @@ body{margin:0;background:#050b24 radial-gradient(ellipse at top,#0b1d55,#050b24 
 .vctl{position:static!important}.vctl button{position:absolute;z-index:3}#vPlay{top:4%;left:2%}#vSound{bottom:5%;right:2%}
 .ct-logo{position:absolute;left:8%;top:1.2%;width:26%;height:auto;z-index:2;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
 .sec img.ct-logo{position:absolute!important;left:8%;top:1.4%;width:24%!important;height:auto!important;display:block}
+.sec img.ct-logo{top:.7%;width:19%!important}
