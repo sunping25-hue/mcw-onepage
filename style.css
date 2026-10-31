@@ -1,0 +1,83 @@
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:#050b24 radial-gradient(ellipse at top,#0b1d55,#050b24 70%) fixed;color:#fff;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;padding-bottom:0}
+.page{max-width:1080px;margin:0 auto;box-shadow:0 0 60px rgba(0,0,0,.6)}
+.sec{position:relative;line-height:0}
+.sec>img{display:block;width:100%;height:auto}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hot{position:absolute;left:5%;width:90%;display:block;border-radius:999px}
+.hot:focus-visible{outline:3px solid #ffd76a}
+.slot{position:absolute;line-height:1.5;display:flex;flex-direction:column;justify-content:center;border-radius:2.2%/3%;overflow:hidden}
+.slot video{width:100%;height:100%;object-fit:cover;background:#000}
+.calc form{display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1.6vw,18px);padding:clamp(10px,3vw,36px);font-size:clamp(12px,2.3vw,24px)}
+.calc label{display:flex;flex-direction:column;gap:4px;color:#f3d9a0}
+.calc input{font:inherit;padding:.4em .6em;border-radius:8px;border:1px solid #c9a24a;background:rgba(5,15,50,.85);color:#fff;width:100%}
+.calc .out{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.calc .out div{background:linear-gradient(#f6d47c,#d39d34);color:#1b1f3a;border-radius:10px;padding:.5em;text-align:center;font-weight:700}
+.calc .out b{display:block;font-size:1.25em}
+.contact{align-items:center;gap:clamp(8px,1.8vw,20px);padding:4%;font-size:clamp(13px,2.6vw,28px);text-align:center}
+.ct-h{margin:0;font-weight:900;font-size:1.3em;color:#ffe08a}
+.ct-btn{display:block;width:80%;padding:.55em;border-radius:999px;text-decoration:none;color:#1b1f3a;background:linear-gradient(#ffe39a,#d6a03b);font-weight:700;box-shadow:0 0 18px rgba(255,200,90,.45)}
+.ct-btn.line{background:linear-gradient(#3fdc6f,#06b046);color:#fff}
+.ct-note{margin:0;font-size:.8em;color:#d9def5}
+.foot{text-align:center;padding:28px 16px 36px;font-size:15px;line-height:1.8;color:#cfd6f5;background:#040920}
+.foot .small{font-size:12px;color:#8e98c4}
+@media (min-width:900px){.calc form{gap:22px}}
+.fab{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:20}
+.fab a{display:flex;align-items:center;gap:8px;padding:10px 14px 10px 10px;border-radius:999px;text-decoration:none;color:#fff;font-size:13px;line-height:1.25;box-shadow:0 4px 16px rgba(0,0,0,.45);border:1px solid rgba(255,220,140,.7)}
+.fab svg{width:26px;height:26px;fill:currentColor;flex:none}
+.fab b{display:block;font-size:15px}
+.f-line{background:#06c755}.f-line2{background:#04994a}.f-tel{background:linear-gradient(#e7b54e,#b8862a);color:#1b1f3a!important}
+@media (max-width:760px){.fab{right:6px;top:auto;bottom:14px;transform:none;gap:8px}.fab a{width:52px;height:52px;padding:0;justify-content:center;flex-direction:column;gap:0;font-size:9px;border-radius:50%}.fab svg{width:22px;height:22px}.fab span{font-size:0}.fab span b{font-size:8.5px;font-weight:700}}
+
+.lead{background:linear-gradient(#0a1847,#050b24);padding:48px 6% 56px;line-height:1.6;text-align:center;border-top:1px solid rgba(246,206,110,.5)}
+.lead h2{margin:0;font-size:clamp(22px,4vw,40px);color:#ffe08a;font-weight:900}
+.lead-sub{color:#cfd6f5;margin:8px 0 24px}
+#leadForm{display:grid;grid-template-columns:1fr 1fr;gap:14px;text-align:left;max-width:760px;margin:0 auto}
+#leadForm label{display:flex;flex-direction:column;gap:6px;color:#f3d9a0;font-size:15px}
+#leadForm label span{color:#ff7a7a;margin-left:2px}
+#leadForm .full,#leadForm .submit,#leadForm .form-msg{grid-column:1/-1}
+#leadForm input,#leadForm select,#leadForm textarea{font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid #c9a24a;background:rgba(5,15,50,.9);color:#fff;transition:border-color .2s,box-shadow .2s}
+#leadForm :is(input,select,textarea):focus{outline:none;border-color:#ffe08a;box-shadow:0 0 0 3px rgba(255,224,138,.25)}
+#leadForm .invalid{border-color:#ff6b6b!important}
+.hp{position:absolute!important;left:-9999px!important}
+.submit{font:inherit;font-size:19px;font-weight:900;padding:15px;border:0;border-radius:999px;background:linear-gradient(#ffe39a,#d6a03b);color:#1b1f3a;cursor:pointer;box-shadow:0 0 22px rgba(255,200,90,.45);transition:transform .15s,box-shadow .2s,filter .2s}
+.submit:hover{filter:brightness(1.07);box-shadow:0 0 32px rgba(255,200,90,.7)}.submit:active{transform:scale(.97)}
+.submit[disabled]{opacity:.6;cursor:wait}
+.form-msg{margin:0;text-align:center;min-height:1.4em;font-weight:700}.form-msg.ok{color:#7dffaa}.form-msg.err{color:#ff8a8a}
+.fine{font-size:12px;color:#8e98c4;text-align:center;margin:0}
+/* interactions */
+.hot{transition:box-shadow .25s,background .25s,transform .15s;-webkit-tap-highlight-color:transparent}
+.hot:hover{background:rgba(255,230,150,.12);box-shadow:0 0 28px rgba(255,210,110,.55)}
+.hot:active{transform:scale(.97);background:rgba(255,230,150,.2)}
+.ct-btn,.fab a{transition:transform .15s,filter .2s,box-shadow .2s}
+.ct-btn:hover,.fab a:hover{filter:brightness(1.08);transform:translateY(-2px)}
+.ct-btn:active,.fab a:active{transform:scale(.95)}
+.sec>img,.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+.in>img,.reveal.in{opacity:1;transform:none}
+.fab a{animation:pulse 2.8s ease-in-out infinite}.fab a:nth-child(2){animation-delay:.5s}.fab a:nth-child(3){animation-delay:1s}
+@keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(0,0,0,.45),0 0 0 0 rgba(255,220,140,.45)}50%{box-shadow:0 4px 16px rgba(0,0,0,.45),0 0 0 9px rgba(255,220,140,0)}}
+.no-js .sec>img,.no-js .reveal{opacity:1;transform:none}
+@media (max-width:760px){#leadForm{grid-template-columns:1fr}.lead{padding-bottom:110px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}.sec>img,.reveal{opacity:1;transform:none}}
+#leadForm label{display:block}
+#leadForm :is(input,select,textarea){display:block;width:100%;margin-top:6px}
+.f-tel2{background:linear-gradient(#f3cf7a,#c99636)}
+.fab a:nth-child(4){animation-delay:1.5s}
+.contact{gap:clamp(5px,1.2vw,14px)}.ct-btn{padding:.42em}
+@media (max-width:760px){.fab{gap:6px}.fab a{width:46px;height:46px}.fab svg{width:20px;height:20px}.fab span b{font-size:7.5px}.lead{padding-bottom:130px}}
+
+#factoryVideo{pointer-events:none}
+.sound-hint{position:absolute;left:50%;bottom:10%;transform:translateX(-50%);font:inherit;font-weight:900;font-size:clamp(14px,2.6vw,22px);padding:.55em 1.2em;border-radius:999px;border:1px solid #ffe08a;background:rgba(10,15,40,.78);color:#ffe08a;cursor:pointer;animation:hintPulse 1.8s ease-in-out infinite;white-space:nowrap}
+.sound-hint[hidden]{display:none}
+@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,224,138,.5)}50%{box-shadow:0 0 0 10px rgba(255,224,138,0)}}
+.calc select,.calc input[readonly]{font:inherit;padding:.4em .6em;border-radius:8px;border:1px solid #c9a24a;background:rgba(5,15,50,.85);color:#fff;width:100%}
+.calc .full{grid-column:1/-1}.calc .out{grid-template-columns:repeat(3,1fr)}
+.calc .out .pay{grid-column:1/-1;background:linear-gradient(#ffe9a8,#f0b43c);font-size:1.15em}.calc .out .pay b{display:inline;font-size:1.6em}.calc .out small{display:block;font-size:.6em;font-weight:400}
+.ph{display:flex;align-items:stretch}.ph i{font-style:normal;display:flex;align-items:center;padding:0 .7em;background:#c9a24a;color:#0a1847;font-weight:900;border-radius:8px 0 0 8px}.ph input{border-radius:0 8px 8px 0!important;flex:1}
+.fab .f-line,.fab .f-line2{background:#06C755!important}.fab .line-logo{fill:#fff;width:30px;height:30px}
+@media (max-width:760px){.fab .line-logo{width:24px;height:24px}}
+.ct-addr{grid-column:1/-1;margin:.3em 0 0;text-align:center;color:#ffe9b0;font-size:.85em;line-height:1.5}.ct-addr a{color:#fff;text-decoration:underline}
+.fab .f-emoji{width:54px;height:54px;padding:0;justify-content:center;border-radius:50%;align-self:flex-end}.fab .f-emoji em{font-style:normal;font-size:28px;line-height:1}
+@media (max-width:760px){.fab .f-emoji{width:46px;height:46px}.fab .f-emoji em{font-size:22px}}
+.fab .f-emoji{background:linear-gradient(#ff7a3d,#e8380d)!important;border:2px solid #fff}.fab .f-emoji .mob{width:32px;height:32px}
+@media (max-width:760px){.fab .f-emoji .mob{width:28px;height:28px}}
