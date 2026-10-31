@@ -85,3 +85,4 @@ body{margin:0;background:#050b24 radial-gradient(ellipse at top,#0b1d55,#050b24 
 .fab .f-landline{width:54px;height:54px;padding:0;justify-content:center;border-radius:50%;align-self:flex-end}.fab .f-landline svg{width:28px;height:28px}
 @media (max-width:760px){.fab .f-landline{width:46px;height:46px}.fab .f-landline svg{width:22px;height:22px}}
 .vctl{gap:6px;right:2%;bottom:5%}.vctl button{font-size:12px;padding:.35em .75em;font-weight:700}
+.vctl{top:4%;left:2%;right:auto!important;bottom:auto!important}
