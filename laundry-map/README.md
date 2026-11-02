@@ -87,3 +87,9 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 ## 線上資料備份
 
 `DATA_DIR=./data npm run backup -- /tmp/mcw-backup-01` 使用 SQLite 原生線上備份 API 與備份引用照片，產生 SHA-256 清單；不修改目前資料庫、不覆寫既有備份，也不保留備份內的登入工作階段。目標需位於 DATA_DIR 外，且尚未存在。備份與還原流程見 [部署說明](docs/DEPLOYMENT.md#備份與還原)。
+
+## 每次修改自動驗收
+
+`.github/workflows/laundry-map.yml` 在洗衣地圖程式或驗收流程變動時執行安裝、後端測試、建置及瀏覽器驗收，保留 7 天手機截圖。沒有發布網站、修改總部資料或使用部署憑證的步驟。
+
+本機先 `npm run build`，再執行 `npm run check:browser`。此入口自行啟動隔離的後台與正式模式測試服務，驗證兩家地址、手機操作及安全限制，結束後清除測試資料。預設使用系統 Chromium；可設定 `CHROMIUM_PATH` 使用 Playwright 下載的瀏覽器，或用 `TEST_MOBILE_PORT` 避開本機已占用的 3100 埠。GitHub 端實際執行結果仍以 Actions 頁面的結果為準。

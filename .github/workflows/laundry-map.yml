@@ -1,0 +1,39 @@
+name: Laundry map checks
+on:
+  pull_request:
+    paths: ["laundry-map/**", ".github/workflows/laundry-map.yml"]
+  push:
+    paths: ["laundry-map/**", ".github/workflows/laundry-map.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: laundry-map
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: laundry-map/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Check phone workflows against real local services
+        run: |
+          export CHROMIUM_PATH="$(node --input-type=module -e 'import {chromium} from "playwright"; console.log(chromium.executablePath())')"
+          npm run check:browser
+      - name: Save phone screenshots and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laundry-map-phone-checks
+          path: laundry-map/artifacts/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
   headless: true,
   args: ["--no-sandbox"],
 });
@@ -17,7 +17,7 @@ for (const width of [375, 390, 1280]) {
   page.on("pageerror", (e) => errors.push(e.message));
   // Block external street tiles to verify the real bundled Taiwan geometry. App API is real.
   await page.route("https://*.tile.openstreetmap.org/**", (r) => r.abort());
-  await page.goto("http://127.0.0.1:3100");
+  await page.goto(process.env.TEST_BASE_URL || "http://127.0.0.1:3100");
   await page
     .getByRole("button", { name: "魔彩自助洗衣・屏東新園店 →", exact: true })
     .waitFor();
@@ -96,7 +96,9 @@ for (const width of [375, 390, 1280]) {
     path: `artifacts/franchise-${width}.png`,
     fullPage: false,
   });
-  await page.goto("http://127.0.0.1:3100/admin");
+  await page.goto(
+    (process.env.TEST_BASE_URL || "http://127.0.0.1:3100") + "/admin",
+  );
   await page.getByRole("heading", { name: "總部管理登入" }).waitFor();
   await page.screenshot({
     path: `artifacts/admin-${width}.png`,

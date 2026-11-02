@@ -29,7 +29,7 @@ try {
     if (i === 99) throw Error("Server not ready");
   }
   browser = await chromium.launch({
-    executablePath: "/usr/bin/chromium",
+    executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
     headless: true,
     args: ["--no-sandbox"],
   });
