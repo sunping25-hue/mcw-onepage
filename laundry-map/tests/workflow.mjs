@@ -161,17 +161,61 @@ try {
   );
   await page.getByText("最後更新：尚無資料").waitFor();
   await page.getByText("剩餘時間：尚無資料").waitFor();
+  await page.getByRole("button", { name: "開始導航 ↗", exact: true }).click();
+  await page.getByRole("dialog", { name: "選擇導航地圖" }).waitFor();
   assert.match(
     await page
       .getByRole("link", { name: "Google Maps 導航 ↗" })
       .getAttribute("href"),
     /destination=24,121/,
   );
+  await page.getByRole("button", { name: "取消導航", exact: true }).click();
   assert.match(
     await page
       .getByRole("link", { name: "洗脫烘 · 測試教學 ↗" })
       .getAttribute("href"),
     /youtube/,
+  );
+  const detailUrl = page.url();
+  assert.match(detailUrl, /store=/);
+  await page.reload();
+  await page
+    .getByRole("heading", { name: "DEMO 測試門市（非營運資料）" })
+    .waitFor();
+  await page.locator(".photo-carousel").evaluate((el) => {
+    const t = new Touch({
+      identifier: 1,
+      target: el,
+      clientX: 260,
+      clientY: 150,
+    });
+    el.dispatchEvent(
+      new TouchEvent("touchstart", { bubbles: true, touches: [t] }),
+    );
+    const end = new Touch({
+      identifier: 1,
+      target: el,
+      clientX: 100,
+      clientY: 155,
+    });
+    el.dispatchEvent(
+      new TouchEvent("touchend", { bubbles: true, changedTouches: [end] }),
+    );
+  });
+  await page.waitForFunction(
+    () =>
+      document.querySelector(".photo-carousel>img").getAttribute("src") ===
+      "/brand/hualien-store-2.webp",
+  );
+  await page.getByRole("button", { name: "上一張照片" }).click();
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: base,
+  });
+  await page.getByRole("button", { name: "分享門市 ↗", exact: true }).click();
+  await page.getByText("門市連結已複製").waitFor();
+  assert.match(
+    await page.evaluate(() => navigator.clipboard.readText()),
+    /store=/,
   );
   mkdirSync("artifacts", { recursive: true });
   for (const width of [320, 375, 390, 430]) {

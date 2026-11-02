@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  GeoJSON,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
+import taiwanOutline from "./data/taiwan.json";
 import { brandPhotos } from "../shared/brand.js";
 const icon = L.divIcon({
   className: "pin",
@@ -31,7 +38,7 @@ async function api(path, options = {}) {
 }
 const emptyStore = () => ({
   name: "",
-  openingStatus: "open",
+  openingStatus: "unknown",
   city: "",
   address: "",
   phone: "",
@@ -150,7 +157,76 @@ const openingLabels = {
   open: "營業中",
   planned: "籌備中",
   temporarily_closed: "暫停營業",
+  unknown: "營業狀態待確認",
 };
+const allowedTabs = ["near", "all", "favorites", "tutorials", "franchise"];
+function readRoute() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    tab: allowedTabs.includes(params.get("tab")) ? params.get("tab") : "near",
+    store: params.get("store") || null,
+  };
+}
+function useRoute() {
+  const [route, setRoute] = useState(readRoute);
+  useEffect(() => {
+    const pop = () => {
+      setRoute(readRoute());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("popstate", pop);
+    return () => window.removeEventListener("popstate", pop);
+  }, []);
+  const navigate = (next, replace = false) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next.tab);
+    if (next.store) url.searchParams.set("store", next.store);
+    else url.searchParams.delete("store");
+    window.history[replace ? "replaceState" : "pushState"](
+      { mcwDetail: !!next.store },
+      "",
+      url,
+    );
+    setRoute(next);
+    window.scrollTo(0, 0);
+  };
+  const back = () => {
+    if (window.history.state?.mcwDetail) window.history.back();
+    else navigate({ ...route, store: null }, true);
+  };
+  return [route, navigate, back];
+}
+function NavigationChooser({ store }) {
+  const dialog = useRef(null);
+  return (
+    <>
+      <button className="primary" onClick={() => dialog.current.showModal()}>
+        開始導航 ↗
+      </button>
+      <dialog
+        ref={dialog}
+        className="navigation-dialog"
+        aria-label="選擇導航地圖"
+      >
+        <h2>前往 {store.name}</h2>
+        <p>{store.address}</p>
+        <div className="actions">
+          <LinkButton
+            url={`https://www.google.com/maps/dir/?api=1&destination=${store.lat !== null && store.lng !== null ? `${store.lat},${store.lng}` : encodeURIComponent(store.address)}`}
+          >
+            Google Maps 導航
+          </LinkButton>
+          <LinkButton
+            url={`https://maps.apple.com/?daddr=${store.lat !== null && store.lng !== null ? `${store.lat},${store.lng}` : encodeURIComponent(store.address)}`}
+          >
+            Apple 地圖導航
+          </LinkButton>
+        </div>
+        <button onClick={() => dialog.current.close()}>取消導航</button>
+      </dialog>
+    </>
+  );
+}
 function PhotoViewer({ src, alt }) {
   const dialog = useRef(null);
   return (
@@ -188,11 +264,41 @@ function PhotoViewer({ src, alt }) {
 }
 function PhotoCarousel({ photos, name }) {
   const [index, setIndex] = useState(0);
+  const start = useRef(null);
   useEffect(() => setIndex(0), [photos.join("|")]);
   if (!photos.length)
     return <div className="photo-empty">門市照片待總部補充</div>;
   return (
-    <section className="photo-carousel" aria-label="門市照片輪播">
+    <section
+      className="photo-carousel"
+      aria-label="門市照片輪播"
+      onTouchStart={(e) => {
+        if (e.target.closest("dialog") || e.touches.length !== 1) {
+          start.current = null;
+          return;
+        }
+        const t = e.touches[0];
+        start.current = { x: t.clientX, y: t.clientY };
+      }}
+      onTouchEnd={(e) => {
+        if (!start.current || e.target.closest("dialog")) return;
+        const t = e.changedTouches[0],
+          dx = t.clientX - start.current.x,
+          dy = t.clientY - start.current.y;
+        start.current = null;
+        if (
+          photos.length > 1 &&
+          Math.abs(dx) > 45 &&
+          Math.abs(dx) > Math.abs(dy) * 1.3
+        )
+          setIndex(
+            (i) => (i + (dx < 0 ? 1 : photos.length - 1)) % photos.length,
+          );
+      }}
+      onTouchCancel={() => {
+        start.current = null;
+      }}
+    >
       <img
         src={photos[index] || photos[0]}
         alt={`${name} 門市照片 ${index + 1}`}
@@ -201,6 +307,9 @@ function PhotoCarousel({ photos, name }) {
         src={photos[index] || photos[0]}
         alt={`${name} 門市照片 ${index + 1}`}
       />
+      <span className="sr-only" aria-live="polite">
+        第 {index + 1} 張，共 {photos.length} 張
+      </span>
       <span className="photo-counter">
         {index + 1} / {photos.length}
       </span>
@@ -264,6 +373,28 @@ function StatusPanel({ snapshot }) {
 function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
   const [statuses, setStatuses] = useState([]);
   const [error, setError] = useState("");
+  const [shareMsg, setShareMsg] = useState("");
+  async function share() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "near");
+    url.searchParams.set("store", s.id);
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: s.name,
+          text: "MCW 洗衣地圖",
+          url: url.href,
+        });
+        setShareMsg("");
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url.href);
+        setShareMsg("門市連結已複製");
+      } else setShareMsg(url.href);
+    } catch (e) {
+      if (e.name !== "AbortError")
+        setShareMsg("無法分享，請複製網址列的門市連結");
+    }
+  }
   useEffect(() => {
     let live = true;
     const load = () =>
@@ -293,12 +424,21 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
       <p className="eyebrow">MCW LAUNDRY / {s.city}</p>
       <h1>{s.name}</h1>
       <div className="store-tags">
-        <span>{openingLabels[s.openingStatus] || "營業中"}</span>
+        <span>{openingLabels[s.openingStatus] || "營業狀態待確認"}</span>
         {[...new Set(s.equipment.map((e) => e.type))].map((type) => (
           <span key={type}>{type}</span>
         ))}
       </div>
-      <button onClick={toggle}>{saved ? "♥ 已收藏" : "♡ 收藏門市"}</button>
+      <div className="detail-quick-actions">
+        <button onClick={toggle}>{saved ? "♥ 已收藏" : "♡ 收藏門市"}</button>
+        <button onClick={share}>分享門市 ↗</button>
+        <NavigationChooser store={s} />
+      </div>
+      {shareMsg && (
+        <p role="status" className="share-message">
+          {shareMsg}
+        </p>
+      )}
       <p>{s.address}</p>
       <p>營業時間：{s.hours || "待總部確認"}</p>
       <p>
@@ -310,14 +450,6 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
       </p>
       {s.announcement && <aside>{s.announcement}</aside>}
       <div className="actions">
-        <LinkButton
-          url={`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`}
-        >
-          Google Maps 導航
-        </LinkButton>
-        <LinkButton url={`https://maps.apple.com/?daddr=${s.lat},${s.lng}`}>
-          Apple 地圖導航
-        </LinkButton>
         <LinkButton url={s.reviewUrl}>Google 評價</LinkButton>
         <LinkButton url={s.aiUrl}>AI 智慧店長</LinkButton>
       </div>
@@ -378,17 +510,19 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
   );
 }
 function PublicApp() {
+  const [{ tab, store: selected }, navigate, backToMap] = useRoute();
+  const openStore = (id) => navigate({ tab, store: id });
   const [stores, setStores] = useState([]),
     [settings, setSettings] = useState({}),
-    [tab, setTab] = useState("near"),
     [view, setView] = useState("map"),
     [query, setQuery] = useState(""),
     [city, setCity] = useState(""),
-    [selected, setSelected] = useState(null),
     [location, setLocation] = useState(null),
     [geoMsg, setGeoMsg] = useState(""),
     [error, setError] = useState(""),
     [tileError, setTileError] = useState(false),
+    [tilesLoaded, setTilesLoaded] = useState(false),
+    [tileAttempt, setTileAttempt] = useState(0),
     [loading, setLoading] = useState(true),
     [favorite, setFavorite] = useState(() => {
       try {
@@ -436,7 +570,11 @@ function PublicApp() {
       (tab !== "favorites" || favorite.includes(s.id)),
   );
   if (location)
-    filtered.sort((a, b) => distance(location, a) - distance(location, b));
+    filtered.sort(
+      (a, b) =>
+        (a.lat !== null && a.lng !== null ? distance(location, a) : Infinity) -
+        (b.lat !== null && b.lng !== null ? distance(location, b) : Infinity),
+    );
   function locate() {
     if (!navigator.geolocation) {
       setGeoMsg("瀏覽器不支援定位，請使用縣市或搜尋。");
@@ -446,7 +584,11 @@ function PublicApp() {
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setLocation({ lat: p.coords.latitude, lng: p.coords.longitude });
-        setGeoMsg("已依距離排序門市");
+        setGeoMsg(
+          stores.some((s) => s.lat !== null && s.lng !== null)
+            ? "已依距離排序門市"
+            : "已取得定位；門市座標確認後即可依距離排序。",
+        );
       },
       () => setGeoMsg("無法取得定位；你仍可選縣市或搜尋門市。"),
       { timeout: 10000, maximumAge: 60000 },
@@ -475,7 +617,7 @@ function PublicApp() {
           <StoreDetail
             store={chosen}
             settings={settings}
-            onBack={() => setSelected(null)}
+            onBack={backToMap}
             saved={favorite.includes(chosen.id)}
             toggle={() => toggle(chosen.id)}
           />
@@ -492,6 +634,12 @@ function PublicApp() {
               </h1>
               <p>MCW 魔彩自助洗衣 · 為每一天，留一點輕鬆</p>
             </div>
+            {selected && !loading && !error && !chosen && (
+              <aside role="alert">
+                此門市目前無法查看，可能已下架或連結有誤。
+                <button onClick={backToMap}>返回門市地圖</button>
+              </aside>
+            )}
             {error ? (
               <aside role="alert">
                 {error} <button onClick={load}>重新載入</button>
@@ -531,7 +679,7 @@ function PublicApp() {
                         setCity("");
                         setQuery("");
                         setLocation(null);
-                        setTab("all");
+                        navigate({ tab: "all", store: null });
                       }}
                     >
                       台灣全圖
@@ -573,24 +721,56 @@ function PublicApp() {
                         markerZoomAnimation={false}
                       >
                         <TileLayer
+                          key={tileAttempt}
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                           eventHandlers={{
                             tileerror: () => setTileError(true),
+                            tileload: () => setTilesLoaded(true),
                           }}
                         />
+                        {(!tilesLoaded || tileError) && (
+                          <GeoJSON
+                            data={taiwanOutline}
+                            interactive={false}
+                            attribution="Natural Earth (public domain)"
+                            style={{
+                              color: "#39b8f0",
+                              weight: 1.5,
+                              fillColor: "#123e60",
+                              fillOpacity: 0.8,
+                            }}
+                          />
+                        )}
                         <MapView
-                          stores={filtered}
-                          onSelect={(s) => setSelected(s.id)}
+                          stores={filtered.filter(
+                            (s) => s.lat !== null && s.lng !== null,
+                          )}
+                          onSelect={(s) => openStore(s.id)}
                           focus={location ? [location.lat, location.lng] : null}
                         />
                       </MapContainer>
+                      {tileError && (
+                        <div className="map-fallback-note" role="status">
+                          <span>臺灣輪廓（無街道）</span>
+                          <button
+                            className="retry-tiles"
+                            onClick={() => {
+                              setTileError(false);
+                              setTilesLoaded(false);
+                              setTileAttempt((n) => n + 1);
+                            }}
+                          >
+                            重試街道地圖
+                          </button>
+                        </div>
+                      )}
                     </section>
                   )}
                   <section className="store-list">
-                    {tileError && (
-                      <p role="status">
-                        地圖底圖暫時無法載入，仍可使用下方門市列表與搜尋。
+                    {filtered.some((s) => s.lat === null || s.lng === null) && (
+                      <p className="location-note">
+                        座標確認中，可先使用地址導航。
                       </p>
                     )}
                     <div className="section-heading">
@@ -612,7 +792,7 @@ function PublicApp() {
                         <p>
                           {tab === "favorites"
                             ? "收藏喜歡的門市，下次更快找到。"
-                            : "總部確認地址與座標並公開後，門市就會出現在這裡。你也可以調整搜尋條件。"}
+                            : "門市資訊陸續更新中。你可以稍後再來，或透過官方 LINE 洽詢。"}
                         </p>
                       </div>
                     )}
@@ -623,12 +803,14 @@ function PublicApp() {
                           <p className="eyebrow">
                             {s.city}
                             {location &&
+                              s.lat !== null &&
+                              s.lng !== null &&
                               ` · ${distance(location, s).toFixed(1)} km`}
                           </p>
                           <h3>
                             <button
                               className="text-button"
-                              onClick={() => setSelected(s.id)}
+                              onClick={() => openStore(s.id)}
                             >
                               {s.name} →
                             </button>
@@ -636,9 +818,10 @@ function PublicApp() {
                           <p>{s.address}</p>
                           <div className="store-tags">
                             <span>
-                              {openingLabels[s.openingStatus] || "營業中"}
+                              {openingLabels[s.openingStatus] || "營業狀態待確認"}
                             </span>
                             <span>即時資訊尚未串接</span>
+                            {s.lat === null && <span>地圖位置待確認</span>}
                           </div>
                         </div>
                         <button
@@ -667,9 +850,7 @@ function PublicApp() {
                     <p className="eyebrow">WASH · DRY · READY</p>
                     <h2>認識你的洗衣好幫手</h2>
                     <p>從洗脫烘到付款，依門市教學安心操作。</p>
-                    <span className="media-label">
-                      設備實拍 · 影片依門市設定
-                    </span>
+                    <span className="media-label">設備實拍 · 非即時畫面</span>
                   </div>
                 </div>
                 <p className="eyebrow">MCW HOW-TO</p>
@@ -768,8 +949,7 @@ function PublicApp() {
             key={id}
             aria-current={tab === id ? "page" : undefined}
             onClick={() => {
-              setTab(id);
-              setSelected(null);
+              navigate({ tab: id, store: null });
               if (id === "all") {
                 setLocation(null);
                 setCity("");
@@ -1023,13 +1203,13 @@ function Admin() {
                 checked={editing.published}
                 onChange={(e) => update("published", e.target.checked)}
               />
-              公開於消費者地圖（需確認地址與座標）
+              公開於消費者地圖（需確認地址；座標可稍後補齊）
             </label>
             <label>
               開店狀態
               <select
                 aria-label="開店狀態"
-                value={editing.openingStatus || "open"}
+                value={editing.openingStatus || "unknown"}
                 onChange={(e) => update("openingStatus", e.target.value)}
               >
                 {Object.entries(openingLabels).map(([k, v]) => (

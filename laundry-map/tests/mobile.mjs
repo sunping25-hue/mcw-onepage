@@ -1,6 +1,5 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
-import sharp from "sharp";
 import { mkdirSync } from "node:fs";
 const browser = await chromium.launch({
   executablePath: "/usr/bin/chromium",
@@ -8,11 +7,6 @@ const browser = await chromium.launch({
   args: ["--no-sandbox"],
 });
 mkdirSync("artifacts", { recursive: true });
-const tile = await sharp({
-  create: { width: 256, height: 256, channels: 3, background: "#c4d8e7" },
-})
-  .png()
-  .toBuffer();
 for (const width of [375, 390, 1280]) {
   const context = await browser.newContext({
     viewport: { width, height: width === 375 ? 812 : 844 },
@@ -21,12 +15,35 @@ for (const width of [375, 390, 1280]) {
   const page = await context.newPage();
   let errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  // Only tile imagery is replaced for deterministic/offline browser checks. App API is real.
-  await page.route("https://*.tile.openstreetmap.org/**", (r) =>
-    r.fulfill({ status: 200, contentType: "image/png", body: tile }),
-  );
+  // Block external street tiles to verify the real bundled Taiwan geometry. App API is real.
+  await page.route("https://*.tile.openstreetmap.org/**", (r) => r.abort());
   await page.goto("http://127.0.0.1:3100");
-  await page.getByText("門市資料確認中").waitFor();
+  await page
+    .getByRole("button", { name: "魔彩自助洗衣・屏東新園店 →", exact: true })
+    .waitFor();
+  await page.getByText("屏東縣新園鄉仙吉路32號", { exact: true }).waitFor();
+  await page.getByText("高雄市三民區大豐一路26號", { exact: true }).waitFor();
+  assert.equal(
+    await page.locator(".pin").count(),
+    0,
+    "Unverified coordinates must not create map markers",
+  );
+  assert.ok(
+    (await page.locator(".leaflet-overlay-pane path").count()) > 0,
+    "Bundled Taiwan coastline must render when street tiles fail",
+  );
+  await page.getByRole("combobox").selectOption("高雄市");
+  assert.equal(
+    await page
+      .getByRole("button", { name: "魔彩自助洗衣・屏東新園店 →", exact: true })
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("button", { name: "魔彩自助洗衣・高雄大豐店 →", exact: true })
+    .waitFor();
+  await page.getByRole("combobox").selectOption("");
+
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -42,6 +59,31 @@ for (const width of [375, 390, 1280]) {
     path: `artifacts/taiwan-${width}.png`,
     fullPage: false,
   });
+  for (const [slug, name, address] of [
+    ["xinyuan", "魔彩自助洗衣・屏東新園店", "屏東縣新園鄉仙吉路32號"],
+    ["dafeng", "魔彩自助洗衣・高雄大豐店", "高雄市三民區大豐一路26號"],
+  ]) {
+    await page.getByRole("button", { name: name + " →", exact: true }).click();
+    await page.getByRole("heading", { name, exact: true }).waitFor();
+    await page
+      .getByRole("button", { name: "開始導航 ↗", exact: true })
+      .click();
+    const link = await page
+      .getByRole("link", { name: "Google Maps 導航 ↗" })
+      .getAttribute("href");
+    assert.equal(new URL(link).searchParams.get("destination"), address);
+    const apple = await page
+      .getByRole("link", { name: "Apple 地圖導航 ↗" })
+      .getAttribute("href");
+    assert.equal(new URL(apple).searchParams.get("daddr"), address);
+    await page.getByRole("button", { name: "取消導航", exact: true }).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `artifacts/${slug}-${width}.png` });
+    await page.goBack();
+    await page
+      .getByRole("button", { name: name + " →", exact: true })
+      .waitFor();
+  }
   await page.getByRole("button", { name: /操作教學$/ }).click();
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
   await page.screenshot({
@@ -65,5 +107,5 @@ for (const width of [375, 390, 1280]) {
 }
 await browser.close();
 console.log(
-  "375px / 390px mobile and 1280px desktop navigation, real API empty states, login and overflow checks passed. Tiles mocked only.",
+  "375px / 390px mobile and 1280px desktop navigation, real owner-provided addresses and offline outline, login and overflow checks passed. Street tiles blocked to verify the bundled geographic fallback.",
 );

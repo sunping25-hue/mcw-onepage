@@ -6,6 +6,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { openDb } from "../server/db.js";
 import { createApp } from "../server/app.js";
+import { seedKnownStores } from "../server/seed.js";
 import {
   MachineStatusProvider,
   ManufacturerApiAdapter,
@@ -298,4 +299,55 @@ test("handoff media paths and equipment metadata validate without exposing priva
       .remaining_seconds,
     null,
   );
+});
+
+test("owner-provided stores seed once, retain exact addresses, and do not invent coordinates or resurrect deletions", () => {
+  const path = mkdtempSync(join(tmpdir(), "mcw-seed-test-"));
+  const seeded = openDb(path);
+  try {
+    seedKnownStores(seeded);
+    const rows = seeded
+      .prepare("SELECT id,document FROM stores ORDER BY id")
+      .all();
+    assert.equal(rows.length, 2);
+    const docs = rows.map((r) => JSON.parse(r.document));
+    assert.deepEqual(
+      new Set(docs.map((s) => s.address)),
+      new Set(["屏東縣新園鄉仙吉路32號", "高雄市三民區大豐一路26號"]),
+    );
+    assert.ok(
+      docs.every(
+        (s) =>
+          s.lat === null &&
+          s.lng === null &&
+          s.confirmed &&
+          s.published &&
+          s.openingStatus === "unknown" &&
+          s.phone === "",
+      ),
+    );
+    seeded.prepare("DELETE FROM stores WHERE id=?").run(rows[0].id);
+    const edited = { ...docs[1], hours: "總部更新" };
+    seeded
+      .prepare("UPDATE stores SET document=? WHERE id=?")
+      .run(JSON.stringify(edited), rows[1].id);
+    seedKnownStores(seeded);
+    assert.equal(seeded.prepare("SELECT count(*) AS n FROM stores").get().n, 1);
+    assert.equal(
+      JSON.parse(seeded.prepare("SELECT document FROM stores").get().document)
+        .hours,
+      "總部更新",
+    );
+    assert.equal(
+      storeSchema.safeParse({ ...doc, lat: null, lng: 121 }).success,
+      false,
+    );
+    assert.equal(
+      storeSchema.safeParse({ ...doc, lat: null, lng: null }).success,
+      true,
+    );
+  } finally {
+    seeded.close();
+    rmSync(path, { recursive: true, force: true });
+  }
 });

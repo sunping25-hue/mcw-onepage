@@ -46,8 +46,8 @@ export const storeSchema = z
   .object({
     name: z.string().trim().min(1).max(100),
     openingStatus: z
-      .enum(["open", "planned", "temporarily_closed"])
-      .default("open"),
+      .enum(["open", "planned", "temporarily_closed", "unknown"])
+      .default("unknown"),
     city: z.string().max(20),
     address: z.string().max(300),
     phone: z
@@ -78,17 +78,15 @@ export const storeSchema = z
     providerReference: z.string().max(200).default(""),
   })
   .superRefine((s, c) => {
-    if (
-      s.published &&
-      (!s.confirmed ||
-        !s.address ||
-        !s.city ||
-        s.lat === null ||
-        s.lng === null)
-    )
+    if (s.published && (!s.confirmed || !s.address || !s.city))
       c.addIssue({
         code: "custom",
-        message: "公開門市必須確認資料並提供縣市、地址與座標",
+        message: "公開門市必須確認資料並提供縣市與完整地址",
+      });
+    if ((s.lat === null) !== (s.lng === null))
+      c.addIssue({
+        code: "custom",
+        message: "緯度與經度需一起填寫，或一起留白待確認",
       });
     if (new Set(s.equipment.map((e) => e.id)).size !== s.equipment.length)
       c.addIssue({ code: "custom", message: "設備 ID 不可重複" });
