@@ -15,7 +15,7 @@ const tile = await sharp({
   .toBuffer();
 for (const width of [375, 390, 1280]) {
   const context = await browser.newContext({
-    viewport: { width, height: 844 },
+    viewport: { width, height: width === 375 ? 812 : 844 },
   });
   await context.grantPermissions([]);
   const page = await context.newPage();
@@ -35,30 +35,30 @@ for (const width of [375, 390, 1280]) {
   );
   await page.screenshot({
     path: `artifacts/nearby-${width}.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole("button", { name: /全台總覽$/ }).click();
   await page.screenshot({
     path: `artifacts/taiwan-${width}.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole("button", { name: /操作教學$/ }).click();
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
   await page.screenshot({
     path: `artifacts/tutorials-${width}.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole("button", { name: /加盟諮詢$/ }).click();
   await page.getByRole("heading", { name: /一間洗衣店/ }).waitFor();
   await page.screenshot({
     path: `artifacts/franchise-${width}.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.goto("http://127.0.0.1:3100/admin");
   await page.getByRole("heading", { name: "總部管理登入" }).waitFor();
   await page.screenshot({
     path: `artifacts/admin-${width}.png`,
-    fullPage: true,
+    fullPage: false,
   });
   assert.deepEqual(errors, []);
   await context.close();

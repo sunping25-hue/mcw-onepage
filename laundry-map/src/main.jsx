@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -151,6 +151,41 @@ const openingLabels = {
   planned: "籌備中",
   temporarily_closed: "暫停營業",
 };
+function PhotoViewer({ src, alt }) {
+  const dialog = useRef(null);
+  return (
+    <>
+      <button
+        type="button"
+        className="view-photo"
+        aria-label={`放大查看：${alt}`}
+        onClick={() => dialog.current.showModal()}
+      >
+        查看完整照片 ↗
+      </button>
+      <dialog
+        className="photo-viewer"
+        ref={dialog}
+        aria-label={alt}
+        onClick={(e) => {
+          if (e.target === dialog.current) dialog.current.close();
+        }}
+      >
+        <div className="photo-viewer-toolbar">
+          <span>{alt}</span>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => dialog.current.close()}
+          >
+            關閉照片 ✕
+          </button>
+        </div>
+        <img className="photo-viewer-image" src={src} alt={alt} />
+      </dialog>
+    </>
+  );
+}
 function PhotoCarousel({ photos, name }) {
   const [index, setIndex] = useState(0);
   useEffect(() => setIndex(0), [photos.join("|")]);
@@ -159,6 +194,10 @@ function PhotoCarousel({ photos, name }) {
   return (
     <section className="photo-carousel" aria-label="門市照片輪播">
       <img
+        src={photos[index] || photos[0]}
+        alt={`${name} 門市照片 ${index + 1}`}
+      />
+      <PhotoViewer
         src={photos[index] || photos[0]}
         alt={`${name} 門市照片 ${index + 1}`}
       />
@@ -305,7 +344,10 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
             {!!e.photos?.length && (
               <div className="equipment-photos">
                 {e.photos.map((p) => (
-                  <img src={p} key={p} alt={`${e.type}設備照片`} />
+                  <div className="equipment-photo" key={p}>
+                    <img src={p} alt={`${e.type}設備照片`} loading="lazy" />
+                    <PhotoViewer src={p} alt={`${e.type}設備照片`} />
+                  </div>
                 ))}
               </div>
             )}
@@ -618,6 +660,8 @@ function PublicApp() {
                   <img
                     src="/brand/mcw-wash-dry.webp"
                     alt="MCW 洗脫烘一體機實拍"
+                    width="488"
+                    height="900"
                   />
                   <div>
                     <p className="eyebrow">WASH · DRY · READY</p>
@@ -669,6 +713,8 @@ function PublicApp() {
                   <img
                     src="/brand/hualien-store-1.webp"
                     alt="交接包提供的花蓮門市外觀實拍"
+                    width="1100"
+                    height="825"
                   />
                   <figcaption>
                     花蓮門市實拍 · 地址與營運資訊待總部確認

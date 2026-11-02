@@ -69,11 +69,11 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 
 ## 尚待提供／驗收
 
-- 已收到並整合 `MCW_洗衣地圖_Codex交接包.zip`：正式 Logo、藍白貓咪、花蓮門市和設備照片已收入 `public/brand/`；來源清單、交接文件與三張參考圖存於 `docs/handoff/`。手機介面依地圖優先、門市資訊卡與科技藍配色調整；仍待使用者視覺驗收，不宣稱像素一致。參考圖的掃碼、會員付款、示例店數與空機數不在本次產品範圍。
+- 已收到並整合 `MCW_洗衣地圖_Codex交接包.zip`：正式 Logo、藍白貓咪、花蓮門市和設備照片已收入 `public/brand/`；來源清單、交接文件與三張參考圖存於 `docs/handoff/`。手機介面依地圖優先、門市資訊卡與科技藍配色調整；門市及加盟照片採手機寬度自適應 4:3 完整顯示，直式設備照保留原比例，門市／設備照片可開啟全螢幕查看；仍待使用者視覺驗收，不宣稱像素一致。參考圖的掃碼、會員付款、示例店數與空機數不在本次產品範圍。
 - 總部填入已核實門市、照片、費率、YouTube／AI／評價／加盟／LINE 入口。未配置入口誠實顯示禁用。
 - 未配置原廠設備 API、LIFF、正式 ADMIN_PASSWORD、Render 部署；不影響本機開發與非假資料版本。
 - PR 與測試網址狀態依交付回報；GitHub API 目前 Forbidden，已保存 API 網域需求，不能視為已建立 PR。
 
 ## 手機驗證截圖
 
-[附近地圖](docs/screenshots/nearby-390.png) · [全台總覽](docs/screenshots/taiwan-390.png) · [門市詳情（隔離 DEMO 測試資料）](docs/screenshots/detail-demo-390.png) · [YouTube 教學空狀態](docs/screenshots/tutorials-390.png) · [加盟入口空狀態](docs/screenshots/franchise-390.png)。此為 390px 實際 UI；底圖為測試替代圖磚，不是正式地圖視覺或真實門市證據。
+[附近地圖](docs/screenshots/nearby-390.png) · [全台總覽](docs/screenshots/taiwan-390.png) · [門市詳情（隔離 DEMO 測試資料）](docs/screenshots/detail-demo-390.png) · [YouTube 教學空狀態](docs/screenshots/tutorials-390.png) · [加盟入口空狀態](docs/screenshots/franchise-390.png)。手機預覽固定為 375×812 或 390×844 的單一視窗，另保留詳情長頁檢查圖；不是將整頁長圖縮成手機大小。此為 390px 實際 UI；底圖為測試替代圖磚，不是正式地圖視覺或真實門市證據。

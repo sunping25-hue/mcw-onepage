@@ -156,7 +156,7 @@ try {
     "/brand/hualien-store-1.webp",
   );
   assert.equal(
-    await page.locator(".equipment-photos img").getAttribute("src"),
+    await page.locator(".equipment-photo > img").getAttribute("src"),
     "/brand/mcw-wash-dry.webp",
   );
   await page.getByText("最後更新：尚無資料").waitFor();
@@ -174,16 +174,44 @@ try {
     /youtube/,
   );
   mkdirSync("artifacts", { recursive: true });
-  for (const width of [375, 390]) {
-    await page.setViewportSize({ width, height: 844 });
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({
+      width,
+      height: { 320: 568, 375: 812, 390: 844, 430: 932 }[width],
+    });
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
       true,
     );
+    const ratio = await page
+      .locator(".photo-carousel > img")
+      .evaluate((el) => el.clientWidth / el.clientHeight);
+    assert.ok(
+      Math.abs(ratio - 4 / 3) < 0.02,
+      "Phone store images must use a responsive 4:3 frame",
+    );
+    assert.equal(
+      await page
+        .locator(".photo-carousel > img")
+        .evaluate((el) => getComputedStyle(el).objectFit),
+      "contain",
+    );
+    await page.locator(".photo-carousel > .view-photo").click();
+    const viewer = page.getByRole("dialog");
+    await viewer.waitFor();
+    assert.ok((await viewer.boundingBox()).width <= width);
+    assert.equal(
+      await viewer.locator("img").getAttribute("src"),
+      "/brand/hualien-store-1.webp",
+    );
+    await page.getByRole("button", { name: "關閉照片 ✕" }).click();
+    await viewer.waitFor({ state: "hidden" });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `artifacts/detail-demo-${width}.png` });
     await page.screenshot({
-      path: `artifacts/detail-demo-${width}.png`,
+      path: `artifacts/detail-demo-${width}-full.png`,
       fullPage: true,
     });
   }
