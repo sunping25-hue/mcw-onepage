@@ -4,9 +4,10 @@ import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
+import { brandPhotos } from "../shared/brand.js";
 const icon = L.divIcon({
   className: "pin",
-  html: "<span>MCW</span>",
+  html: '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="2" width="16" height="20" rx="3"/><circle cx="12" cy="14" r="5"/><path d="M7 6h2m2 0h6M8 14q4 4 8 0"/></svg></span>',
   iconSize: [42, 42],
   iconAnchor: [21, 42],
 });
@@ -30,6 +31,7 @@ async function api(path, options = {}) {
 }
 const emptyStore = () => ({
   name: "",
+  openingStatus: "open",
   city: "",
   address: "",
   phone: "",
@@ -144,6 +146,82 @@ const distance = (a, b) => {
     )
   );
 };
+const openingLabels = {
+  open: "營業中",
+  planned: "籌備中",
+  temporarily_closed: "暫停營業",
+};
+function PhotoCarousel({ photos, name }) {
+  const [index, setIndex] = useState(0);
+  useEffect(() => setIndex(0), [photos.join("|")]);
+  if (!photos.length)
+    return <div className="photo-empty">門市照片待總部補充</div>;
+  return (
+    <section className="photo-carousel" aria-label="門市照片輪播">
+      <img
+        src={photos[index] || photos[0]}
+        alt={`${name} 門市照片 ${index + 1}`}
+      />
+      <span className="photo-counter">
+        {index + 1} / {photos.length}
+      </span>
+      {photos.length > 1 && (
+        <div className="carousel-controls">
+          <button
+            aria-label="上一張照片"
+            onClick={() =>
+              setIndex((index + photos.length - 1) % photos.length)
+            }
+          >
+            ‹
+          </button>
+          <button
+            aria-label="下一張照片"
+            onClick={() => setIndex((index + 1) % photos.length)}
+          >
+            ›
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+function StatusPanel({ snapshot }) {
+  const fresh =
+    snapshot?.last_updated &&
+    Date.now() - Date.parse(snapshot.last_updated) >= 0 &&
+    Date.now() - Date.parse(snapshot.last_updated) <=
+      snapshot.ttl_seconds * 1000;
+  const state = fresh ? snapshot.status : "unknown";
+  const label =
+    {
+      idle: "空閒",
+      running: "運轉中",
+      fault: "故障",
+      offline: "離線",
+      unknown: "未知／未連線",
+    }[state] || "未知／未連線";
+  return (
+    <div className="machine-status">
+      <span className={`status status-${state}`}>
+        {snapshot?.simulated && <b>DEMO 模擬資料 · </b>}
+        {label}
+      </span>
+      <small>
+        最後更新：
+        {snapshot?.last_updated
+          ? new Date(snapshot.last_updated).toLocaleString("zh-TW")
+          : "尚無資料"}
+      </small>
+      <small>
+        剩餘時間：
+        {fresh && state === "running" && snapshot.remaining_seconds !== null
+          ? `${Math.ceil(snapshot.remaining_seconds / 60)} 分鐘`
+          : "尚無資料"}
+      </small>
+    </div>
+  );
+}
 function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
   const [statuses, setStatuses] = useState([]);
   const [error, setError] = useState("");
@@ -172,17 +250,15 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
       <button className="text-button" onClick={onBack}>
         ← 返回地圖
       </button>
-      <div className="photos">
-        {s.photos.length ? (
-          s.photos.map((p, i) => (
-            <img src={p} key={p} alt={`${s.name} 門市照片 ${i + 1}`} />
-          ))
-        ) : (
-          <div className="photo-empty">門市照片待總部補充</div>
-        )}
-      </div>
+      <PhotoCarousel photos={s.photos} name={s.name} />
       <p className="eyebrow">MCW LAUNDRY / {s.city}</p>
       <h1>{s.name}</h1>
+      <div className="store-tags">
+        <span>{openingLabels[s.openingStatus] || "營業中"}</span>
+        {[...new Set(s.equipment.map((e) => e.type))].map((type) => (
+          <span key={type}>{type}</span>
+        ))}
+      </div>
       <button onClick={toggle}>{saved ? "♥ 已收藏" : "♡ 收藏門市"}</button>
       <p>{s.address}</p>
       <p>營業時間：{s.hours || "待總部確認"}</p>
@@ -207,7 +283,9 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
         <LinkButton url={s.aiUrl}>AI 智慧店長</LinkButton>
       </div>
       <h2>店內設備</h2>
-      <p className="notice">即時資訊尚未串接 · 不提供空機數或倒數預估</p>
+      <p className="notice">
+        尚未串接設備，即時狀態暫不可用 · 不提供空機數或倒數預估
+      </p>
       {error && <p role="alert">{error}</p>}
       {!s.equipment.length && <p>設備資料待總部補充。</p>}
       {s.equipment.map((e) => (
@@ -219,15 +297,24 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
             <p>
               {e.model || "型號待確認"} · {e.quantity} 台
             </p>
-            <small>設備 ID：{e.id}</small>
+            <small>
+              設備 ID：{e.id}
+              {e.number ? ` · 機號 ${e.number}` : ""}
+            </small>
+            {e.specification && <p>{e.specification}</p>}
+            {!!e.photos?.length && (
+              <div className="equipment-photos">
+                {e.photos.map((p) => (
+                  <img src={p} key={p} alt={`${e.type}設備照片`} />
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <strong>{e.price || "費率待確認"}</strong>
-            <p className="status">
-              {statuses.find((x) => x.machine_id === e.id)?.status === "offline"
-                ? "離線"
-                : "未知／未連線"}
-            </p>
+            <StatusPanel
+              snapshot={statuses.find((x) => x.machine_id === e.id)}
+            />
           </div>
         </article>
       ))}
@@ -252,6 +339,7 @@ function PublicApp() {
   const [stores, setStores] = useState([]),
     [settings, setSettings] = useState({}),
     [tab, setTab] = useState("near"),
+    [view, setView] = useState("map"),
     [query, setQuery] = useState(""),
     [city, setCity] = useState(""),
     [selected, setSelected] = useState(null),
@@ -327,14 +415,20 @@ function PublicApp() {
     <>
       <header>
         <a className="brand" href="/">
-          <img src="/brand/logo.webp" alt="MCW 魔彩" />
+          <img src="/brand/mcw-round-logo.png" alt="MCW 魔彩正式 Logo" />
           <span>
             洗衣地圖<small>LAUNDRY MAP</small>
           </span>
         </a>
         <LinkButton url={settings.lineUrl}>官方 LINE</LinkButton>
       </header>
-      <main>
+      <main
+        className={
+          !chosen && ["near", "all", "favorites"].includes(tab)
+            ? "map-page"
+            : ""
+        }
+      >
         {chosen ? (
           <StoreDetail
             store={chosen}
@@ -403,21 +497,54 @@ function PublicApp() {
                   </div>
                   {geoMsg && <p role="status">{geoMsg}</p>}
                 </section>
-                <div className="map-layout">
-                  <section className="map-wrap" aria-label="互動門市地圖">
-                    <MapContainer center={[23.7, 121]} zoom={7} scrollWheelZoom>
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        eventHandlers={{ tileerror: () => setTileError(true) }}
-                      />
-                      <MapView
-                        stores={filtered}
-                        onSelect={(s) => setSelected(s.id)}
-                        focus={location ? [location.lat, location.lng] : null}
-                      />
-                    </MapContainer>
-                  </section>
+                <div className="map-toolbar">
+                  <span>
+                    <i />
+                    即時資訊尚未串接
+                  </span>
+                  <div role="group" aria-label="檢視方式">
+                    <button
+                      aria-pressed={view === "map"}
+                      onClick={() => setView("map")}
+                    >
+                      地圖
+                    </button>
+                    <button
+                      aria-pressed={view === "list"}
+                      onClick={() => setView("list")}
+                    >
+                      列表
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className={`map-layout ${view === "list" ? "list-mode" : ""}`}
+                >
+                  {view === "map" && (
+                    <section className="map-wrap" aria-label="互動門市地圖">
+                      <MapContainer
+                        center={[23.7, 121]}
+                        zoom={7}
+                        scrollWheelZoom
+                        zoomAnimation={false}
+                        fadeAnimation={false}
+                        markerZoomAnimation={false}
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          eventHandlers={{
+                            tileerror: () => setTileError(true),
+                          }}
+                        />
+                        <MapView
+                          stores={filtered}
+                          onSelect={(s) => setSelected(s.id)}
+                          focus={location ? [location.lat, location.lng] : null}
+                        />
+                      </MapContainer>
+                    </section>
+                  )}
                   <section className="store-list">
                     {tileError && (
                       <p role="status">
@@ -430,7 +557,11 @@ function PublicApp() {
                     </div>
                     {!loading && !filtered.length && (
                       <div className="empty">
-                        <span>⌖</span>
+                        <img
+                          className="empty-mascot"
+                          src="/brand/mcw-cat.webp"
+                          alt="MCW 藍白貓咪吉祥物"
+                        />
                         <h3>
                           {stores.length
                             ? "找不到符合條件的門市"
@@ -461,7 +592,12 @@ function PublicApp() {
                             </button>
                           </h3>
                           <p>{s.address}</p>
-                          <small>即時資訊尚未串接</small>
+                          <div className="store-tags">
+                            <span>
+                              {openingLabels[s.openingStatus] || "營業中"}
+                            </span>
+                            <span>即時資訊尚未串接</span>
+                          </div>
                         </div>
                         <button
                           aria-label={"收藏 " + s.name}
@@ -477,12 +613,28 @@ function PublicApp() {
               </>
             )}
             {tab === "tutorials" && (
-              <section className="content-panel">
+              <section className="content-panel tutorials-panel">
+                <div className="tutorial-feature">
+                  <img
+                    src="/brand/mcw-wash-dry.webp"
+                    alt="MCW 洗脫烘一體機實拍"
+                  />
+                  <div>
+                    <p className="eyebrow">WASH · DRY · READY</p>
+                    <h2>認識你的洗衣好幫手</h2>
+                    <p>從洗脫烘到付款，依門市教學安心操作。</p>
+                    <span className="media-label">
+                      設備實拍 · 影片依門市設定
+                    </span>
+                  </div>
+                </div>
                 <p className="eyebrow">MCW HOW-TO</p>
                 <h2>你的洗衣小幫手</h2>
                 {["洗脫烘", "雙層烘", "付款"].map((cat) => (
                   <article className="tutorial" key={cat}>
-                    <span className="tutorial-icon">▶</span>
+                    <span className="tutorial-icon" aria-hidden="true">
+                      {cat === "洗脫烘" ? "01" : cat === "雙層烘" ? "02" : "03"}
+                    </span>
                     <div>
                       <h3>{cat}操作教學</h3>
                       {stores.flatMap((s) =>
@@ -513,6 +665,15 @@ function PublicApp() {
             )}
             {tab === "franchise" && (
               <section className="content-panel franchise">
+                <figure className="franchise-photo">
+                  <img
+                    src="/brand/hualien-store-1.webp"
+                    alt="交接包提供的花蓮門市外觀實拍"
+                  />
+                  <figcaption>
+                    花蓮門市實拍 · 地址與營運資訊待總部確認
+                  </figcaption>
+                </figure>
                 <p className="eyebrow">START YOUR MCW JOURNEY</p>
                 <h2>
                   一間洗衣店，
@@ -526,6 +687,13 @@ function PublicApp() {
                 <LinkButton url={settings.franchiseUrl}>
                   詢問洗衣加盟
                 </LinkButton>
+                <div className="brand-guide">
+                  <img src="/brand/mcw-cat.webp" alt="MCW 藍白貓咪吉祥物" />
+                  <p>
+                    從空間規劃到設備選擇，
+                    <br />與 MCW 一起打造社區的洗衣好鄰居。
+                  </p>
+                </div>
                 <p className="muted">
                   此頁不收集個人資料。前往外部聯絡管道後，請先閱讀該服務的隱私說明。
                 </p>
@@ -535,7 +703,12 @@ function PublicApp() {
         )}
       </main>
       <footer>
-        MCW 魔彩自助洗衣 · 好生活，從乾淨開始。<a href="/admin">總部管理</a>
+        <img
+          className="footer-wordmark"
+          src="/brand/mcw-logo-red.png"
+          alt="MCW"
+        />
+        魔彩自助洗衣 · 好生活，從乾淨開始。<a href="/admin">總部管理</a>
       </footer>
       <nav className="bottom-nav" aria-label="主選單">
         {[
@@ -806,7 +979,41 @@ function Admin() {
               />
               公開於消費者地圖（需確認地址與座標）
             </label>
+            <label>
+              開店狀態
+              <select
+                aria-label="開店狀態"
+                value={editing.openingStatus || "open"}
+                onChange={(e) => update("openingStatus", e.target.value)}
+              >
+                {Object.entries(openingLabels).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </label>
             <h3>門市與機台照片</h3>
+            <details className="asset-library">
+              <summary>選用交接包品牌照片</summary>
+              <p>花蓮門市照片不代表地址或營運資料已核實。只應用於對應門市。</p>
+              <div className="asset-grid">
+                {brandPhotos.map((p) => (
+                  <button
+                    key={p.path}
+                    aria-label={p.label}
+                    type="button"
+                    disabled={editing.photos.includes(p.path)}
+                    onClick={() =>
+                      update("photos", [...editing.photos, p.path])
+                    }
+                  >
+                    <img src={p.path} alt={p.label} />
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </details>
             <p>上限 8MB，伺服器會驗證、移除 metadata 並轉為 WebP。</p>
             <input
               aria-label="上傳門市照片"
@@ -862,6 +1069,8 @@ function Admin() {
                 </label>
                 {[
                   ["id", "設備 ID"],
+                  ["number", "機號"],
+                  ["specification", "設備規格"],
                   ["model", "型號"],
                   ["capacity", "容量"],
                   ["price", "費率（未核實請留白）"],
@@ -883,6 +1092,34 @@ function Admin() {
                     updateItem("equipment", i, "quantity", Number(v))
                   }
                 />
+                <label>
+                  設備照片
+                  <select
+                    aria-label="設備照片"
+                    value={eq.photos?.[0] || ""}
+                    onChange={(e) =>
+                      updateItem(
+                        "equipment",
+                        i,
+                        "photos",
+                        e.target.value ? [e.target.value] : [],
+                      )
+                    }
+                  >
+                    <option value="">未指定照片</option>
+                    {[
+                      ...new Set([
+                        ...editing.photos,
+                        ...brandPhotos.map((p) => p.path),
+                      ]),
+                    ].map((path) => (
+                      <option value={path} key={path}>
+                        {brandPhotos.find((p) => p.path === path)?.label ||
+                          path.split("/").pop()}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   type="button"
                   onClick={() =>

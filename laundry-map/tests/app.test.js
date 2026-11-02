@@ -256,3 +256,46 @@ test("trusted API adapter validates schema, ages timestamps, and fails closed", 
     false,
   );
 });
+
+test("handoff media paths and equipment metadata validate without exposing private or arbitrary paths", () => {
+  const raw = {
+    ...doc,
+    openingStatus: "planned",
+    photos: ["/brand/hualien-store-1.webp"],
+    equipment: [
+      {
+        ...doc.equipment[0],
+        number: "01",
+        specification: "test spec",
+        photos: ["/brand/mcw-wash-dry.webp"],
+      },
+    ],
+  };
+  const parsed = storeSchema.safeParse(raw);
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.equipment[0].number, "01");
+  assert.equal(
+    storeSchema.safeParse({ ...raw, photos: ["/brand/../../.env"] }).success,
+    false,
+  );
+  assert.equal(
+    storeSchema.safeParse({ ...raw, photos: ["https://example.com/image.jpg"] })
+      .success,
+    false,
+  );
+  const status = {
+    machine_id: "m1",
+    status: "running",
+    last_updated: new Date().toISOString(),
+    ttl_seconds: 60,
+    source: "manufacturer",
+    simulated: false,
+    remaining_seconds: 120,
+  };
+  assert.equal(normalizeStatus(status).remaining_seconds, 120);
+  assert.equal(
+    normalizeStatus({ ...status, last_updated: "2020-01-01T00:00:00.000Z" })
+      .remaining_seconds,
+    null,
+  );
+});

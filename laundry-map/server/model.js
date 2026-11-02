@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPhotoPath } from "../shared/brand.js";
 const link = z
   .string()
   .max(2000)
@@ -28,10 +29,13 @@ const youtube = link.refine((v) => {
     return false;
   }
 }, "請填寫 YouTube 網址");
-const photo = z.string().regex(/^\/uploads\/[a-f0-9-]+\.webp$/);
+const photo = z.string().refine(isPhotoPath, "請選擇已上傳的照片或品牌素材");
 export const equipmentSchema = z.object({
   id: z.string().min(1).max(100),
   type: z.enum(["洗脫烘", "雙層烘", "加水站"]),
+  number: z.string().max(50).default(""),
+  specification: z.string().max(500).default(""),
+  photos: z.array(photo).max(6).default([]),
   model: z.string().max(100),
   capacity: z.string().max(100),
   quantity: z.number().int().min(1).max(1000),
@@ -41,6 +45,9 @@ export const equipmentSchema = z.object({
 export const storeSchema = z
   .object({
     name: z.string().trim().min(1).max(100),
+    openingStatus: z
+      .enum(["open", "planned", "temporarily_closed"])
+      .default("open"),
     city: z.string().max(20),
     address: z.string().max(300),
     phone: z
@@ -92,6 +99,7 @@ export const machineStatusSchema = z.object({
   status: z.enum(["idle", "running", "fault", "offline", "unknown"]),
   last_updated: z.string().datetime().nullable(),
   ttl_seconds: z.number().int().positive(),
+  remaining_seconds: z.number().int().nonnegative().nullable().default(null),
   source: z.enum(["unconnected", "demo", "manufacturer"]),
   simulated: z.boolean(),
 });
@@ -103,6 +111,7 @@ export class MachineStatusProvider {
       status: "unknown",
       last_updated: null,
       ttl_seconds: 60,
+      remaining_seconds: null,
       source: "unconnected",
       simulated: false,
     }));
@@ -115,6 +124,7 @@ export class StubMachineStatusProvider extends MachineStatusProvider {
       status: ["idle", "running", "fault", "offline", "unknown"][i % 5],
       last_updated: new Date().toISOString(),
       ttl_seconds: 60,
+      remaining_seconds: null,
       source: "demo",
       simulated: true,
     }));
@@ -126,6 +136,10 @@ export function normalizeStatus(raw, now = Date.now()) {
   return {
     ...s,
     status: age > s.ttl_seconds * 1000 || age < 0 ? "unknown" : s.status,
+    remaining_seconds:
+      age > s.ttl_seconds * 1000 || age < 0 || s.status !== "running"
+        ? null
+        : s.remaining_seconds,
   };
 }
 export function publicStore(s) {

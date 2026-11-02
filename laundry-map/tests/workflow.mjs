@@ -65,7 +65,20 @@ try {
   await page.getByLabel("營業時間").fill("測試時段");
   await page.getByLabel("已核實門市資訊").check();
   await page.getByLabel("公開於消費者地圖", { exact: false }).check();
+  await page.getByLabel("開店狀態", { exact: true }).selectOption("planned");
+  await page.getByText("選用交接包品牌照片", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "花蓮門市外觀實拍", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "花蓮門市實拍 2", exact: true })
+    .click();
   await page.getByRole("button", { name: "＋ 新增設備" }).click();
+  await page.getByLabel("機號", { exact: true }).fill("TEST-01");
+  await page.getByLabel("設備規格", { exact: true }).fill("僅自動測試規格");
+  await page
+    .getByLabel("設備照片", { exact: true })
+    .selectOption("/brand/mcw-wash-dry.webp");
   await page.getByLabel("設備 ID", { exact: true }).fill("test-1");
   await page.getByLabel("型號", { exact: true }).fill("測試型號");
   await page.getByLabel("容量", { exact: true }).fill("測試容量");
@@ -122,6 +135,9 @@ try {
     .click();
   await page.getByRole("button", { name: /我的收藏$/ }).click();
   await page.getByRole("heading", { name: "我的收藏" }).waitFor();
+  await page.getByRole("button", { name: "列表", exact: true }).click();
+  assert.equal(await page.locator(".leaflet-container").count(), 0);
+  await page.getByRole("button", { name: "地圖", exact: true }).click();
   await page
     .getByRole("button", { name: "DEMO 測試門市（非營運資料） →" })
     .click();
@@ -129,6 +145,22 @@ try {
     .getByRole("heading", { name: "DEMO 測試門市（非營運資料）" })
     .waitFor();
   await page.getByText("未知／未連線").waitFor();
+  await page.getByRole("button", { name: "下一張照片" }).click();
+  assert.equal(
+    await page.locator(".photo-carousel>img").getAttribute("src"),
+    "/brand/hualien-store-2.webp",
+  );
+  await page.getByRole("button", { name: "上一張照片" }).click();
+  assert.equal(
+    await page.locator(".photo-carousel>img").getAttribute("src"),
+    "/brand/hualien-store-1.webp",
+  );
+  assert.equal(
+    await page.locator(".equipment-photos img").getAttribute("src"),
+    "/brand/mcw-wash-dry.webp",
+  );
+  await page.getByText("最後更新：尚無資料").waitFor();
+  await page.getByText("剩餘時間：尚無資料").waitFor();
   assert.match(
     await page
       .getByRole("link", { name: "Google Maps 導航 ↗" })

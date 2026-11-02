@@ -13,7 +13,7 @@ const tile = await sharp({
 })
   .png()
   .toBuffer();
-for (const width of [375, 390]) {
+for (const width of [375, 390, 1280]) {
   const context = await browser.newContext({
     viewport: { width, height: 844 },
   });
@@ -65,5 +65,5 @@ for (const width of [375, 390]) {
 }
 await browser.close();
 console.log(
-  "375px / 390px mobile navigation, real API empty states, login and overflow checks passed. Tiles mocked only.",
+  "375px / 390px mobile and 1280px desktop navigation, real API empty states, login and overflow checks passed. Tiles mocked only.",
 );
