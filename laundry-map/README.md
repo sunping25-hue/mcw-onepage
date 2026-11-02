@@ -55,7 +55,7 @@ node tests/mobile.mjs
 node tests/workflow.mjs
 ```
 
-瀏覽器測試需 `/usr/bin/chromium`（或調整腳本 executablePath）。`mobile.mjs` 在 375px / 390px 與 1280px 桌面擷取四個主要入口與登入畫面；`workflow.mjs` 實測總部登入、設定、建立／公開門市、群聚展開、標記選店、收藏、詳情導航連結、定位拒絕及搜尋、手指左右滑動、分享複製、直接連結／重新整理／返回，並驗證交接包素材選取、輪播、機號／規格／照片保存，擷取第五個詳情畫面。`workflow.mjs` 的測試門市明標 DEMO 且只在 `/tmp` 隔離 DB，結束刪除；`mobile.mjs` 則驗證使用者提供的兩筆地址與縣市／地址導航。圖片保存在 ignored 的 `artifacts/`。瀏覽器測試會阻擋 OSM 街道圖磚，驗證內建真實臺灣輪廓降級功能；其他 API 為真實本機服務，**不代表外部圖磚連線或核准設計相似度已驗證**。10 項後端測試包含未授權操作、來源驗證、持久化 CRUD、私有設定隔離、圖片、URL、TTL、登出。
+瀏覽器測試需 `/usr/bin/chromium`（或調整腳本 executablePath）。`mobile.mjs` 在 375px / 390px 與 1280px 桌面擷取四個主要入口與登入畫面；`workflow.mjs` 實測總部登入、設定、建立／公開門市、群聚展開、標記選店、收藏、詳情導航連結、定位拒絕及搜尋、手指左右滑動、分享複製、直接連結／重新整理／返回，並驗證交接包素材選取、輪播、機號／規格／照片保存，擷取第五個詳情畫面。`workflow.mjs` 的測試門市明標 DEMO 且只在 `/tmp` 隔離 DB，結束刪除；`mobile.mjs` 則驗證使用者提供的兩筆地址與縣市／地址導航。圖片保存在 ignored 的 `artifacts/`。瀏覽器測試會阻擋 OSM 街道圖磚，驗證內建真實臺灣輪廓降級功能；其他 API 為真實本機服務，**不代表外部圖磚連線或核准設計相似度已驗證**。11 項後端測試包含未授權操作、來源驗證、持久化 CRUD、私有設定隔離、圖片、URL、TTL、登出。
 
 ## 正式部署
 
@@ -65,7 +65,7 @@ npm run build
 NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 ```
 
-有提供 `render.yaml` 部署範例：使用 permanent disk、HTTPS 與安全設定的 `ADMIN_PASSWORD`，不要將密碼寫入 YAML。Render Blueprint 可使用 repo 內此檔路徑；既有一頁式 GitHub Pages 不會啟動此 Node 服務。健康檢查 `/api/stores`。正式部署後需驗證 HTTPS 登入、圖片持久化與重啟保留資料。Render 權限／服務未配置，未建立公開測試站。
+有提供 `render.yaml` 部署範例：使用 permanent disk、HTTPS 與安全設定的 `ADMIN_PASSWORD`，不要將密碼寫入 YAML。Render Blueprint 可使用 repo 內此檔路徑；既有一頁式 GitHub Pages 不會啟動此 Node 服務。健康檢查 `/api/stores`。正式部署後需驗證 HTTPS 登入、圖片持久化與重啟保留資料。Render 權限／服務未配置，未建立公開測試站。完整設定與手機上線驗收步驟見 [部署說明](docs/DEPLOYMENT.md)。
 
 需要 npm registry、GitHub、OpenStreetMap 圖磚連線；雲端已保存額外需求 `api.github.com`、`drive.google.com`、`drive.usercontent.google.com`、`*.tile.openstreetmap.org` 至環境草稿。保存不代表已套用，請在環境設定檢閱儲存並發布。
 
@@ -83,3 +83,7 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 ## 內建臺灣輪廓
 
 `src/data/taiwan.json` 擷取自 [Natural Earth 1:10m countries](https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_10m_admin_0_countries.geojson) 的 Taiwan feature，僅保留輪廓及來源資訊、座標保留五位小數。Natural Earth 資料為 [public domain](https://www.naturalearthdata.com/about/terms-of-use/)。這是可縮放平移的真實向量輪廓，不是地圖截圖，也不包含街道。OSM 圖磚失敗時顯示明確降級提示及重試按鈕；未提供座標的門市只列地址，不產生虛構標記。
+
+## 線上資料備份
+
+`DATA_DIR=./data npm run backup -- /tmp/mcw-backup-01` 使用 SQLite 原生線上備份 API 與備份引用照片，產生 SHA-256 清單；不修改目前資料庫、不覆寫既有備份，也不保留備份內的登入工作階段。目標需位於 DATA_DIR 外，且尚未存在。備份與還原流程見 [部署說明](docs/DEPLOYMENT.md#備份與還原)。

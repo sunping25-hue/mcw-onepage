@@ -818,7 +818,8 @@ function PublicApp() {
                           <p>{s.address}</p>
                           <div className="store-tags">
                             <span>
-                              {openingLabels[s.openingStatus] || "營業狀態待確認"}
+                              {openingLabels[s.openingStatus] ||
+                                "營業狀態待確認"}
                             </span>
                             <span>即時資訊尚未串接</span>
                             {s.lat === null && <span>地圖位置待確認</span>}
@@ -1182,6 +1183,21 @@ function Admin() {
                 />
               ))}
             </div>
+            {editing.address && (
+              <div className="coordinate-help">
+                <a
+                  className="button"
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(editing.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  在 Google Maps 核對門市位置 ↗
+                </a>
+                <p>
+                  確認門牌與位置後，再填入緯度、經度並儲存。地址搜尋結果不會自動當成已核實座標。
+                </p>
+              </div>
+            )}
             <label>
               門市公告
               <textarea

@@ -1527,3 +1527,14 @@ html {
     min-height: 280px;
   }
 }
+.coordinate-help {
+  margin: 14px 0 22px;
+  padding: 14px;
+  background: #102e48;
+  border-radius: 10px;
+}
+.coordinate-help p {
+  font-size: 0.75rem;
+  margin: 8px 0 0;
+  line-height: 1.7;
+}
