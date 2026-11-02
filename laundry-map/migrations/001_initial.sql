@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS stores (id TEXT PRIMARY KEY, document TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), document TEXT NOT NULL);
+INSERT OR IGNORE INTO settings VALUES(1, '{"franchiseUrl":"","lineUrl":""}');
+CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL);

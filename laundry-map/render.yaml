@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: mcw-laundry-map
+    runtime: node
+    rootDir: laundry-map
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/stores
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data/mcw
+      - key: ADMIN_USER
+        value: hq
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: mcw-data
+      mountPath: /var/data
+      sizeGB: 1
