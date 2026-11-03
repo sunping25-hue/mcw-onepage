@@ -34,6 +34,8 @@ export function createApp({
   app.disable("x-powered-by");
   app.use(
     helmet({
+      // OSM public tiles require a valid website Referer. Send only our origin cross-site.
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
       contentSecurityPolicy: production
         ? {
             directives: {
@@ -130,11 +132,9 @@ export function createApp({
     }),
     (req, res) => {
       if (!passwordHash)
-        return res
-          .status(503)
-          .json({
-            error: "總部登入尚未設定，請設定 ADMIN_PASSWORD（至少 16 字元）",
-          });
+        return res.status(503).json({
+          error: "總部登入尚未設定，請設定 ADMIN_PASSWORD（至少 16 字元）",
+        });
       const p = typeof req.body?.password === "string" ? req.body.password : "";
       if (p.length > 1024) return res.sendStatus(401);
       const valid = timingSafeEqual(scryptSync(p, salt, 64), passwordHash);
@@ -241,12 +241,9 @@ export function createApp({
     },
   );
   app.use((e, req, res, next) =>
-    res
-      .status(e.status || 400)
-      .json({
-        error:
-          e.code === "LIMIT_FILE_SIZE" ? "圖片不得超過 8MB" : "請求處理失敗",
-      }),
+    res.status(e.status || 400).json({
+      error: e.code === "LIMIT_FILE_SIZE" ? "圖片不得超過 8MB" : "請求處理失敗",
+    }),
   );
   return app;
 }

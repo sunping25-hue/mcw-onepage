@@ -12,7 +12,7 @@
 
 ## 驗證
 
-- `npm test`：11 項通過，包含權限、同來源驗證、CRUD／持久化、圖片、網址、TTL、adapter 與登出。
+- `npm test`：12 項通過，包含權限、同來源驗證、CRUD／持久化、圖片、網址、TTL、adapter 與登出。
 - `npm run build` 成功；`npm audit --omit=dev` 為 0 個已知漏洞。
 - Chromium 375px / 390px 與 1280px 桌面：主要頁面、空狀態、無水平溢出；真實本機後端總部登入→新增／公開→群聚展開／標記選店→收藏→詳情連結→定位拒絕／搜尋通過。
 - 正式模式 HTML、JS 資產、CSP、公開 API 與未設定帳密時拒絕登入通過。

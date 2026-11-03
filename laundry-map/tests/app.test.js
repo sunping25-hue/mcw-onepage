@@ -351,3 +351,11 @@ test("owner-provided stores seed once, retain exact addresses, and do not invent
     rmSync(path, { recursive: true, force: true });
   }
 });
+
+test("map requests retain origin attribution without leaking store query parameters", async () => {
+  const r = await req("/stores");
+  assert.equal(
+    r.headers.get("referrer-policy"),
+    "strict-origin-when-cross-origin",
+  );
+});

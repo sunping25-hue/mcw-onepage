@@ -16,13 +16,24 @@ for (const width of [375, 390, 1280]) {
   let errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   // Block external street tiles to verify the real bundled Taiwan geometry. App API is real.
-  await page.route("https://*.tile.openstreetmap.org/**", (r) => r.abort());
+  const tileReferrers = [];
+  await page.route("https://*.tile.openstreetmap.org/**", (r) => {
+    tileReferrers.push(r.request().headers()["referer"]);
+    return r.abort();
+  });
   await page.goto(process.env.TEST_BASE_URL || "http://127.0.0.1:3100");
   await page
     .getByRole("button", { name: "魔彩自助洗衣・屏東新園店 →", exact: true })
     .waitFor();
   await page.getByText("屏東縣新園鄉仙吉路32號", { exact: true }).waitFor();
   await page.getByText("高雄市三民區大豐一路26號", { exact: true }).waitFor();
+  await page.waitForTimeout(100);
+  assert.ok(tileReferrers.length > 0, "Browser must request tiles");
+  assert.ok(
+    tileReferrers.every((value) => value === new URL(page.url()).origin + "/"),
+    "Tile Referer must be the website origin only",
+  );
+
   assert.equal(
     await page.locator(".pin").count(),
     0,
