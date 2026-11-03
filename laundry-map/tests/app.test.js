@@ -359,3 +359,12 @@ test("map requests retain origin attribution without leaking store query paramet
     "strict-origin-when-cross-origin",
   );
 });
+
+test('official LINE is initialized once without overwriting later headquarters settings',()=>{
+ const path=mkdtempSync(join(tmpdir(),'mcw-line-test-'));let local=openDb(path);
+ try{
+  assert.equal(JSON.parse(local.prepare('SELECT document FROM settings WHERE id=1').get().document).lineUrl,'https://lin.ee/s4v3cIG');
+  local.prepare('UPDATE settings SET document=? WHERE id=1').run(JSON.stringify({lineUrl:'https://line.me/updated-by-hq',franchiseUrl:'https://example.com/contact'}));local.close();local=openDb(path);
+  assert.equal(JSON.parse(local.prepare('SELECT document FROM settings WHERE id=1').get().document).lineUrl,'https://line.me/updated-by-hq');
+ }finally{local.close();rmSync(path,{recursive:true,force:true})}
+});

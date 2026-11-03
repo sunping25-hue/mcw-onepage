@@ -22,6 +22,9 @@ for (const width of [375, 390, 1280]) {
     return r.abort();
   });
   await page.goto(process.env.TEST_BASE_URL || "http://127.0.0.1:3100");
+  await page.getByRole('link',{name:'官方 LINE ↗',exact:true}).waitFor();
+  assert.equal(await page.getByRole('link',{name:'官方 LINE ↗',exact:true}).getAttribute('href'),'https://lin.ee/s4v3cIG');
+
   await page
     .getByRole("button", { name: "魔彩自助洗衣・屏東新園店 →", exact: true })
     .waitFor();
