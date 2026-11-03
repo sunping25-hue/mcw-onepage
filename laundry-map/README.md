@@ -93,3 +93,7 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 `.github/workflows/laundry-map.yml` 在洗衣地圖程式或驗收流程變動時執行安裝、後端測試、建置及瀏覽器驗收，保留 7 天手機截圖。沒有發布網站、修改總部資料或使用部署憑證的步驟。
 
 本機先 `npm run build`，再執行 `npm run check:browser`。此入口自行啟動隔離的後台與正式模式測試服務，驗證兩家地址、手機操作及安全限制，結束後清除測試資料。預設使用系統 Chromium；可設定 `CHROMIUM_PATH` 使用 Playwright 下載的瀏覽器，或用 `TEST_MOBILE_PORT` 避開本機已占用的 3100 埠。GitHub 端實際執行結果仍以 Actions 頁面的結果為準。
+
+## 部署站地址定位
+
+在 Render 設定 `GEOCODE_ON_START=true` 後重新部署，伺服器會使用 Nominatim 對兩家使用者提供的地址各查詢一次，間隔至少 1.1 秒，且不阻擋網站啟動。只有縣市、路名、門牌均相符且結果唯一時才保存座標；失敗或歧義不建立標記。查詢紀錄保存在資料庫，避免每次啟動重複請求。免費版儲存空間重建後紀錄也會消失，因此定位完成後建議關閉此開關，並將確認座標另行保存。第三方查詢可能沒有該門牌資料；測試使用隔離測試回應，不代表兩家真實座標已查得。

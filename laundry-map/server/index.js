@@ -4,6 +4,7 @@ import express from "express";
 import { openDb } from "./db.js";
 import { createApp } from "./app.js";
 import { seedKnownStores } from "./seed.js";
+import {locateKnownStores} from "./geocode.js";
 process.chdir(fileURLToPath(new URL("..", import.meta.url)));
 const dataDir = resolve(process.env.DATA_DIR || "data");
 const production = process.env.NODE_ENV === "production";
@@ -35,3 +36,5 @@ app.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
     "MCW laundry map listening on port " + (process.env.PORT || 3000),
   ),
 );
+
+if(production&&process.env.GEOCODE_ON_START==='true')locateKnownStores(db).catch(e=>console.error('地址定位服務：'+e.message));
