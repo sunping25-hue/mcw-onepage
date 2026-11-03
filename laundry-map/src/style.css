@@ -1112,20 +1112,19 @@ header {
   }
   .map-page .store-list {
     position: relative;
-    z-index: 600;
-    margin: -112px 9px 0;
+    z-index: auto;
+    margin: 16px 0 0;
     padding: 16px;
     background: linear-gradient(145deg, #102b46f5, #081c32fc);
     border: 1px solid #396a8a;
     border-radius: 19px;
-    box-shadow: 0 -5px 30px #0005;
-    max-height: 420px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    box-shadow: none;
+    max-height: none;
+    overflow: visible;
   }
   .map-page .store-list:before {
-    content: "";
-    display: block;
+    content: none;
+    display: none;
     width: 32px;
     height: 3px;
     border-radius: 4px;
@@ -1507,7 +1506,7 @@ html {
 }
 @media (max-width: 700px) {
   .map-page .map-layout:not(.list-mode) .store-list {
-    margin-top: -200px;
+    margin-top: 16px;
   }
   .store-list .location-note {
     font-size: 0.65rem;

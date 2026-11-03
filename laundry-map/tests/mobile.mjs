@@ -61,6 +61,16 @@ for (const width of [375, 390, 1280]) {
     ),
     true,
   );
+  if(width<=700){
+    const map=await page.locator('.map-wrap').boundingBox();
+    const list=await page.locator('.store-list').boundingBox();
+    assert.ok(list.y>=map.y+map.height,'Phone store list must not cover the map');
+    await page.getByRole('button',{name:'列表',exact:true}).click();
+    assert.equal(await page.locator('.map-wrap').count(),0);
+    await page.getByRole('button',{name:'魔彩自助洗衣・高雄大豐店 →',exact:true}).waitFor();
+    await page.getByRole('button',{name:'地圖',exact:true}).click();
+    await page.evaluate(()=>window.scrollTo(0,0));
+  }
   await page.screenshot({
     path: `artifacts/nearby-${width}.png`,
     fullPage: false,
