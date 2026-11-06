@@ -314,6 +314,28 @@ try {
   await page.getByRole("button", { name: "← 返回地圖" }).click();
   const card = page.locator(".store-card", { hasText: "相簿測試門市（非營運資料）" });
   assert.equal(await card.locator("img").first().getAttribute("src"), savedOrder[0]);
+  const phonePhoto = await card.locator("img").evaluate((el) => ({
+    width: el.clientWidth,
+    height: el.clientHeight,
+  }));
+  assert.equal(phonePhoto.width, phonePhoto.height);
+  assert.ok(phonePhoto.width >= 90, "Phone store main photo stays a large square");
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const desktopPhoto = await card.locator("img").evaluate((el) => ({
+    width: el.clientWidth,
+    height: el.clientHeight,
+  }));
+  assert.equal(desktopPhoto.width, desktopPhoto.height);
+  assert.ok(desktopPhoto.width >= 110, "Desktop store main photo stays a large square");
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
   const blankCard = page.locator(".store-card", {
     hasText: "照片待補測試門市（非營運資料）",
   });
