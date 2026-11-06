@@ -45,7 +45,7 @@ export function createApp({
               defaultSrc: ["'self'"],
               scriptSrc: ["'self'"],
               styleSrc: ["'self'", "'unsafe-inline'"],
-              imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
+              imgSrc: ["'self'", "data:", "https:"],
               connectSrc: ["'self'"],
               objectSrc: ["'none'"],
               frameAncestors: ["'none'"],

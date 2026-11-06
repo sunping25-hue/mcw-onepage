@@ -12,7 +12,12 @@ import "leaflet/dist/leaflet.css";
 import "./style.css";
 import taiwanOutline from "./data/taiwan.json";
 import { overviewLatLngs, overviewPadding } from "./taiwan-overview.js";
-import { brandPhotos } from "../shared/brand.js";
+import {
+  STORE_PHOTO_LIMIT,
+  brandPhotos,
+  handoffStorePhotos,
+  isSafePhotoUrl,
+} from "../shared/brand.js";
 import {
   DEFAULT_STORE_HOURS,
   EQUIPMENT_TYPES,
@@ -415,75 +420,126 @@ function PhotoViewer({ src, alt }) {
     </>
   );
 }
+function AlbumLinkPreview({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <>
+      <img src={src} alt={failed ? `${alt}無法載入` : alt} onError={() => setFailed(true)} />
+      {failed && (
+        <span className="photo-error" role="alert">
+          這張照片無法載入
+        </span>
+      )}
+    </>
+  );
+}
 function PhotoCarousel({ photos, name }) {
   const [index, setIndex] = useState(0);
+  const [broken, setBroken] = useState({});
   const start = useRef(null);
   useEffect(() => setIndex(0), [photos.join("|")]);
   if (!photos.length)
     return <div className="photo-empty">門市照片待總部補充</div>;
+  const safeIndex = index >= 0 && index < photos.length ? index : 0;
+  const src = photos[safeIndex] || photos[0];
+  const show = (next) =>
+    setIndex(((next % photos.length) + photos.length) % photos.length);
+  const markBroken = (photo) =>
+    setBroken((current) =>
+      current[photo] ? current : { ...current, [photo]: true },
+    );
   return (
     <section
       className="photo-carousel"
-      aria-label="門市照片輪播"
+      aria-label="門市相簿"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.target.closest("dialog") || photos.length < 2) return;
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          show(safeIndex - 1);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          show(safeIndex + 1);
+        }
+      }}
       onTouchStart={(e) => {
         if (e.target.closest("dialog") || e.touches.length !== 1) {
           start.current = null;
           return;
         }
         const t = e.touches[0];
-        start.current = { x: t.clientX, y: t.clientY };
+        start.current = { x: t.clientX, y: t.clientY, index: safeIndex };
       }}
       onTouchEnd={(e) => {
-        if (!start.current || e.target.closest("dialog")) return;
-        const t = e.changedTouches[0],
-          dx = t.clientX - start.current.x,
-          dy = t.clientY - start.current.y;
+        const origin = start.current;
         start.current = null;
-        if (
-          photos.length > 1 &&
-          Math.abs(dx) > 45 &&
-          Math.abs(dx) > Math.abs(dy) * 1.3
-        )
-          setIndex(
-            (i) => (i + (dx < 0 ? 1 : photos.length - 1)) % photos.length,
-          );
+        if (!origin || e.target.closest("dialog") || photos.length < 2) return;
+        const t = e.changedTouches[0];
+        if (!t) return;
+        const dx = t.clientX - origin.x,
+          dy = t.clientY - origin.y;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3)
+          show(origin.index + (dx < 0 ? 1 : -1));
       }}
       onTouchCancel={() => {
         start.current = null;
       }}
     >
-      <img
-        src={photos[index] || photos[0]}
-        alt={`${name} 門市照片 ${index + 1}`}
-      />
-      <PhotoViewer
-        src={photos[index] || photos[0]}
-        alt={`${name} 門市照片 ${index + 1}`}
-      />
-      <span className="sr-only" aria-live="polite">
-        第 {index + 1} 張，共 {photos.length} 張
-      </span>
-      <span className="photo-counter">
-        {index + 1} / {photos.length}
-      </span>
-      {photos.length > 1 && (
-        <div className="carousel-controls">
+      <div className="photo-stage">
+        <img
+          src={src}
+          alt={
+            broken[src]
+              ? `${name} 第 ${safeIndex + 1} 張照片無法載入`
+              : `${name} 門市照片 ${safeIndex + 1}`
+          }
+          onError={() => markBroken(src)}
+        />
+        {broken[src] && (
+          <p className="photo-error" role="alert">
+            這張照片無法載入
+          </p>
+        )}
+        {!broken[src] && <PhotoViewer src={src} alt={`${name} 門市照片 ${safeIndex + 1}`} />}
+        <span className="photo-counter" aria-hidden="true">
+          {safeIndex + 1} / {photos.length}
+        </span>
+        {photos.length > 1 && (
+          <div className="carousel-controls">
+            <button
+              type="button"
+              aria-label="上一張照片"
+              onClick={() => show(safeIndex - 1)}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="下一張照片"
+              onClick={() => show(safeIndex + 1)}
+            >
+              ›
+            </button>
+          </div>
+        )}
+      </div>
+      <p className="photo-count-label" aria-live="polite">
+        第 {safeIndex + 1} 張，共 {photos.length} 張
+      </p>
+      <div className="photo-thumbs" role="group" aria-label="照片縮圖">
+        {photos.map((photo, i) => (
           <button
-            aria-label="上一張照片"
-            onClick={() =>
-              setIndex((index + photos.length - 1) % photos.length)
-            }
+            type="button"
+            key={`${photo}-${i}`}
+            aria-label={`第 ${i + 1} 張縮圖`}
+            aria-current={i === safeIndex ? "true" : undefined}
+            onClick={() => show(i)}
           >
-            ‹
+            <img src={photo} alt="" onError={() => markBroken(photo)} />
           </button>
-          <button
-            aria-label="下一張照片"
-            onClick={() => setIndex((index + 1) % photos.length)}
-          >
-            ›
-          </button>
-        </div>
-      )}
+        ))}
+      </div>
     </section>
   );
 }
@@ -1241,7 +1297,8 @@ function Admin() {
     [busy, setBusy] = useState(false),
     [demo, setDemo] = useState(null),
     [cloud, setCloud] = useState(null),
-    [geoNote, setGeoNote] = useState("");
+    [geoNote, setGeoNote] = useState(""),
+    [photoUrl, setPhotoUrl] = useState("");
   const load = () =>
     Promise.all([
       api("/admin/stores"),
@@ -1274,6 +1331,33 @@ function Admin() {
     }
   }
   const update = (key, v) => setEditing((s) => ({ ...s, [key]: v }));
+  const moveStorePhoto = (index, direction) =>
+    setEditing((current) => {
+      const photos = [...(current.photos || [])];
+      const next = index + direction;
+      if (next < 0 || next >= photos.length) return current;
+      const [item] = photos.splice(index, 1);
+      photos.splice(next, 0, item);
+      return { ...current, photos };
+    });
+  const addPhotoUrl = () => {
+    const url = photoUrl.trim();
+    if (!isSafePhotoUrl(url)) {
+      setError("請貼上 https 照片網址，且不要包含帳號、密碼或內網位址");
+      return;
+    }
+    if (editing.photos.includes(url)) {
+      setError("這張照片已經在相簿裡");
+      return;
+    }
+    if (editing.photos.length >= STORE_PHOTO_LIMIT) {
+      setError("每家門市最多 5 張照片");
+      return;
+    }
+    update("photos", [...editing.photos, url]);
+    setPhotoUrl("");
+    setError("");
+  };
   const updateItem = (key, i, k, v) =>
     update(
       key,
@@ -1434,6 +1518,7 @@ function Admin() {
         <button
           onClick={() => {
             setEditing(emptyStore());
+            setPhotoUrl("");
             setDemo(null);
           }}
         >
@@ -1446,6 +1531,7 @@ function Admin() {
             key={s.id}
             onClick={() => {
               setEditing(editorStore(s));
+              setPhotoUrl("");
               setDemo(null);
             }}
           >
@@ -1459,6 +1545,9 @@ function Admin() {
             onSubmit={(e) => {
               e.preventDefault();
               run(async () => {
+                if ((editing.photos || []).length > STORE_PHOTO_LIMIT) {
+                  throw Error("每家門市最多 5 張照片");
+                }
                 const saved = await api(
                   "/admin/stores" + (editing.id ? "/" + editing.id : ""),
                   {
@@ -1590,20 +1679,34 @@ function Admin() {
                 ))}
               </select>
             </label>
-            <h3>門市與機台照片</h3>
+            <h3>門市相簿</h3>
+            <p>
+              每家店最多 {STORE_PHOTO_LIMIT}{" "}
+              張照片。請貼上這家店自己的 https 照片網址，第一張是主照片。沒有照片時，前台只顯示「門市照片待總部補充」，不會用
+              Logo、機台宣傳圖或佔位圖代替。
+            </p>
             <details className="asset-library">
               <summary>選用交接包品牌照片</summary>
-              <p>花蓮門市照片不代表地址或營運資料已核實。只應用於對應門市。</p>
+              <p>
+                這裡只有花蓮門市交接實拍，不是這家店的照片，也不代表地址或營運資料已核實。只應用於對應門市。
+              </p>
               <div className="asset-grid">
-                {brandPhotos.map((p) => (
+                {handoffStorePhotos.map((p) => (
                   <button
                     key={p.path}
                     aria-label={p.label}
                     type="button"
-                    disabled={editing.photos.includes(p.path)}
-                    onClick={() =>
-                      update("photos", [...editing.photos, p.path])
+                    disabled={
+                      editing.photos.includes(p.path) ||
+                      editing.photos.length >= STORE_PHOTO_LIMIT
                     }
+                    onClick={() => {
+                      if (editing.photos.length >= STORE_PHOTO_LIMIT) {
+                        setError("每家門市最多 5 張照片");
+                        return;
+                      }
+                      update("photos", [...editing.photos, p.path]);
+                    }}
                   >
                     <img src={p.path} alt={p.label} />
                     {p.label}
@@ -1611,40 +1714,76 @@ function Admin() {
                 ))}
               </div>
             </details>
-            <p>上限 8MB，伺服器會驗證、移除 metadata 並轉為 WebP。</p>
-            <input
-              aria-label="上傳門市照片"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                run(async () => {
-                  const f = new FormData();
-                  f.append("photo", file);
-                  const p = await api("/admin/photos", {
-                    method: "POST",
-                    body: f,
-                  });
-                  setEditing((s) => ({ ...s, photos: [...s.photos, p.url] }));
-                });
-              }}
-            />
+            {editing.photos.length >= STORE_PHOTO_LIMIT && (
+              <p role="status">已達 5 張上限。請先移除再加入。</p>
+            )}
+            {!editing.photos.length && (
+              <p>目前沒有門市照片。前台會顯示「門市照片待總部補充」。</p>
+            )}
+            <div className="photo-url-row">
+              <label>
+                照片網址
+                <input
+                  aria-label="照片網址"
+                  inputMode="url"
+                  autoComplete="off"
+                  placeholder="https://"
+                  value={photoUrl}
+                  disabled={editing.photos.length >= STORE_PHOTO_LIMIT}
+                  onChange={(e) => setPhotoUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    addPhotoUrl();
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={editing.photos.length >= STORE_PHOTO_LIMIT}
+                onClick={addPhotoUrl}
+              >
+                加入照片連結
+              </button>
+            </div>
             <div className="photo-admin">
               {editing.photos.map((p, i) => (
-                <div key={p}>
-                  <img src={p} alt={"門市照片 " + (i + 1)} />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      update(
-                        "photos",
-                        editing.photos.filter((_, j) => j !== i),
-                      )
-                    }
-                  >
-                    移除照片
-                  </button>
+                <div key={`${p}-${i}`}>
+                  <AlbumLinkPreview src={p} alt={"門市照片 " + (i + 1)} />
+                  <strong className="photo-main-label">
+                    {i === 0 ? "主照片" : `第 ${i + 1} 張`}
+                  </strong>
+                  <small className="photo-url">{p}</small>
+                  <div className="photo-order">
+                    <button
+                      type="button"
+                      aria-label={`上移第 ${i + 1} 張`}
+                      disabled={i === 0}
+                      onClick={() => moveStorePhoto(i, -1)}
+                    >
+                      上移
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`下移第 ${i + 1} 張`}
+                      disabled={i === editing.photos.length - 1}
+                      onClick={() => moveStorePhoto(i, 1)}
+                    >
+                      下移
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`移除第 ${i + 1} 張`}
+                      onClick={() =>
+                        update(
+                          "photos",
+                          editing.photos.filter((_, j) => j !== i),
+                        )
+                      }
+                    >
+                      移除照片
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

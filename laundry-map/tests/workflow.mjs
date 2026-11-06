@@ -194,12 +194,12 @@ try {
   assert.equal(await machines.getAttribute("rel"), "noopener noreferrer");
   await page.getByRole("button", { name: "下一張照片" }).click();
   assert.equal(
-    await page.locator(".photo-carousel>img").getAttribute("src"),
+    await page.locator(".photo-stage > img").getAttribute("src"),
     "/brand/hualien-store-2.webp",
   );
   await page.getByRole("button", { name: "上一張照片" }).click();
   assert.equal(
-    await page.locator(".photo-carousel>img").getAttribute("src"),
+    await page.locator(".photo-stage > img").getAttribute("src"),
     "/brand/hualien-store-1.webp",
   );
   assert.equal(
@@ -258,7 +258,7 @@ try {
   });
   await page.waitForFunction(
     () =>
-      document.querySelector(".photo-carousel>img").getAttribute("src") ===
+      document.querySelector(".photo-stage > img").getAttribute("src") ===
       "/brand/hualien-store-2.webp",
   );
   await page.getByRole("button", { name: "上一張照片" }).click();
@@ -284,7 +284,7 @@ try {
       true,
     );
     const ratio = await page
-      .locator(".photo-carousel > img")
+      .locator(".photo-stage > img")
       .evaluate((el) => el.clientWidth / el.clientHeight);
     assert.ok(
       Math.abs(ratio - 4 / 3) < 0.02,
@@ -292,11 +292,11 @@ try {
     );
     assert.equal(
       await page
-        .locator(".photo-carousel > img")
+        .locator(".photo-stage > img")
         .evaluate((el) => getComputedStyle(el).objectFit),
       "contain",
     );
-    await page.locator(".photo-carousel > .view-photo").click();
+    await page.locator(".photo-stage > .view-photo").click();
     const viewer = page.getByRole("dialog");
     await viewer.waitFor();
     assert.ok((await viewer.boundingBox()).width <= width);

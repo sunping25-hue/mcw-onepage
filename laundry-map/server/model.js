@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { isPhotoPath } from "../shared/brand.js";
+import {
+  STORE_PHOTO_LIMIT,
+  isPhotoPath,
+  isStorePhotoPath,
+} from "../shared/brand.js";
 import {
   EQUIPMENT_TYPES,
   capacityKg,
@@ -35,6 +39,14 @@ const youtube = link.refine((v) => {
   }
 }, "請填寫 YouTube 網址");
 const photo = z.string().refine(isPhotoPath, "請選擇已上傳的照片或品牌素材");
+const storePhoto = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine(
+    isStorePhotoPath,
+    "請貼上 https 照片網址。不能使用 Logo、機台宣傳圖、佔位圖或不安全網址",
+  );
 export const equipmentSchema = z
   .object({
     id: z.string().min(1).max(100),
@@ -76,7 +88,9 @@ export const storeSchema = z
     lng: z.number().min(-180).max(180).nullable(),
     confirmed: z.boolean(),
     published: z.boolean(),
-    photos: z.array(photo).max(12),
+    photos: z
+      .array(storePhoto)
+      .max(STORE_PHOTO_LIMIT, "每家門市最多 5 張照片"),
     equipment: z.array(equipmentSchema).max(100),
     tutorials: z
       .array(
@@ -106,6 +120,8 @@ export const storeSchema = z
         code: "custom",
         message: "緯度與經度需一起填寫，或一起留白待確認",
       });
+    if (new Set(s.photos).size !== s.photos.length)
+      c.addIssue({ code: "custom", message: "門市照片不可重複" });
     if (new Set(s.equipment.map((e) => e.id)).size !== s.equipment.length)
       c.addIssue({ code: "custom", message: "設備 ID 不可重複" });
   });

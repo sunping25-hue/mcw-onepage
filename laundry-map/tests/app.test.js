@@ -185,6 +185,137 @@ test("image upload decodes actual bytes, strips metadata and rejects malformed i
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type"), /webp/);
 });
+test("store album accepts five photo links, rejects unsafe URLs, and leaves other stores unchanged", async () => {
+  const urls = ["red", "green", "blue", "yellow", "purple"].map(
+    (color) => `https://photos.example.test/${color}.png`,
+  );
+  for (const blocked of [
+    "http://photos.example.test/red.png",
+    "https://user:pass@photos.example.test/red.png",
+    "javascript:alert(1)",
+    "https://localhost/red.png",
+    "https://127.0.0.1/red.png",
+    "https://10.1.1.1/red.png",
+    "https://192.168.1.8/red.png",
+    "https://172.16.0.4/red.png",
+    "https://169.254.1.1/red.png",
+    "https://[::1]/red.png",
+    "https://photos.example.test/page.html",
+    "https://photos.example.test/app.js",
+    "https://photos.example.test/icon.svg",
+    "/brand/mcw-wash-dry.webp",
+    "/brand/mcw-round-logo.png",
+    "/brand/mcw-logo-red.png",
+    "/brand/logo.webp",
+    "/brand/mcw-22kg-blue.webp",
+    "/brand/mcw-machine-lineup-guide.webp",
+    "/brand/community-lineup.webp",
+    "/brand/mcw-cat.webp",
+    "/brand/placeholder.webp",
+  ]) {
+    assert.equal(
+      storeSchema.safeParse({ ...doc, photos: [blocked] }).success,
+      false,
+      blocked,
+    );
+  }
+  assert.equal(
+    storeSchema.safeParse({
+      ...doc,
+      photos: ["  https://photos.example.test/room.jpg  "],
+    }).data.photos[0],
+    "https://photos.example.test/room.jpg",
+  );
+  assert.equal(
+    storeSchema.safeParse({
+      ...doc,
+      photos: ["https://cdn.example.com/room?id=1"],
+    }).success,
+    true,
+  );
+  const album = {
+    ...doc,
+    name: "相簿測試門市（非營運資料）",
+    address: "相簿測試地址",
+    photos: urls,
+  };
+  const created = await req("/admin/stores", "POST", album);
+  assert.equal(created.status, 200);
+  const saved = await created.json();
+  assert.deepEqual(saved.photos, urls);
+  const reversed = [...urls].reverse();
+  const reordered = await req("/admin/stores/" + saved.id, "PUT", {
+    ...album,
+    photos: reversed,
+  });
+  assert.equal(reordered.status, 200);
+  assert.deepEqual((await reordered.json()).photos, reversed);
+  const removed = await req("/admin/stores/" + saved.id, "PUT", {
+    ...album,
+    photos: reversed.slice(1),
+  });
+  assert.equal(removed.status, 200);
+  assert.deepEqual((await removed.json()).photos, reversed.slice(1));
+  const tooMany = await req("/admin/stores/" + saved.id, "PUT", {
+    ...album,
+    photos: [...reversed, "https://photos.example.test/orange.png"],
+  });
+  assert.equal(tooMany.status, 400);
+  assert.match((await tooMany.json()).error, /5/);
+  const legacy = "/uploads/12345678-1234-1234-1234-123456789abc.webp";
+  assert.equal(
+    storeSchema.safeParse({ ...doc, photos: [legacy] }).success,
+    true,
+  );
+  const hualien = [1, 2, 3, 4, 5].map(
+    (n) => `/brand/hualien-store-${n}.webp`,
+  );
+  assert.equal(storeSchema.safeParse({ ...doc, photos: hualien }).success, true);
+  assert.equal(
+    storeSchema.safeParse({ ...doc, photos: [...hualien, urls[0]] }).success,
+    false,
+  );
+  assert.equal(
+    storeSchema.safeParse({ ...doc, photos: [urls[0], urls[0]] }).success,
+    false,
+  );
+  assert.equal(
+    storeSchema.safeParse({
+      ...doc,
+      photos: [],
+      equipment: [
+        { ...doc.equipment[0], photos: ["/brand/mcw-wash-dry.webp"] },
+      ],
+    }).success,
+    true,
+  );
+  const otherResponse = await req("/admin/stores", "POST", {
+    ...doc,
+    name: "另一家測試門市（非營運資料）",
+    address: "另一個測試地址",
+    photos: [],
+  });
+  assert.equal(otherResponse.status, 200);
+  const otherId = (await otherResponse.json()).id;
+  const again = await req("/admin/stores/" + saved.id, "PUT", {
+    ...album,
+    photos: reversed,
+  });
+  assert.equal(again.status, 200);
+  const rows = await (await req("/admin/stores")).json();
+  assert.deepEqual(rows.find((s) => s.id === saved.id).photos, reversed);
+  assert.deepEqual(rows.find((s) => s.id === otherId).photos, []);
+  assert.deepEqual(rows.find((s) => s.id === id).photos, []);
+  const pub = await (await req("/stores")).json();
+  assert.deepEqual(pub.find((s) => s.id === saved.id).photos, reversed);
+  assert.deepEqual(pub.find((s) => s.id === otherId).photos, []);
+  assert.equal((await req("/admin/stores/" + saved.id, "DELETE")).status, 200);
+  assert.equal((await req("/admin/stores/" + otherId, "DELETE")).status, 200);
+  assert.deepEqual(
+    (await (await req("/admin/stores")).json()).find((s) => s.id === id).photos,
+    [],
+  );
+});
 test("member points tutorial category is allowed and still requires YouTube", () => {
   assert.equal(
     storeSchema.safeParse({
@@ -324,6 +455,13 @@ test("handoff media paths and equipment metadata validate without exposing priva
   assert.equal(
     storeSchema.safeParse({ ...raw, photos: ["https://example.com/image.jpg"] })
       .success,
+    true,
+  );
+  assert.equal(
+    storeSchema.safeParse({
+      ...raw,
+      photos: ["https://user:secret@example.com/image.jpg"],
+    }).success,
     false,
   );
   const status = {

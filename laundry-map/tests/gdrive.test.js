@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { generateKeyPairSync, createVerify } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDb } from "../server/db.js";
@@ -159,11 +159,24 @@ test("Google Drive snapshots round-trip, reject a corrupt backup, and do not pub
   try {
     seedKnownStores(db);
     mkdirSync(join(data, "uploads"));
-    writeFileSync(join(data, "uploads", "12345678-1234-1234-1234-123456789abc.webp"), Buffer.from("photo"));
+    const album = [
+      ["12345678-1234-1234-1234-123456789abc.webp", "photo-a"],
+      ["22345678-1234-1234-1234-123456789abd.webp", "photo-b"],
+      ["32345678-1234-1234-1234-123456789abe.webp", "photo-c"],
+    ];
+    for (const [name, bytes] of album) {
+      writeFileSync(join(data, "uploads", name), Buffer.from(bytes));
+    }
     const row = db.prepare("SELECT id,document FROM stores LIMIT 1").get();
+    const untouched = db
+      .prepare("SELECT id,document FROM stores WHERE id!=?")
+      .all(row.id);
     const document = JSON.parse(row.document);
     document.phone = "07-111-2222";
-    document.photos = ["/uploads/12345678-1234-1234-1234-123456789abc.webp"];
+    document.photos = [
+      ...album.map(([name]) => "/uploads/" + name),
+      "https://photos.example.test/store.jpg",
+    ];
     db.prepare("UPDATE stores SET document=? WHERE id=?").run(JSON.stringify(document), row.id);
     const store = createDriveStore({
       clientId: "client",
@@ -180,8 +193,17 @@ test("Google Drive snapshots round-trip, reject a corrupt backup, and do not pub
     assert.equal((await persist.restoreInto(restored)).restored, true);
     const copy = openDb(restored);
     try {
-      assert.equal(JSON.parse(copy.prepare("SELECT document FROM stores WHERE id=?").get(row.id).document).phone, "07-111-2222");
+      const restoredDoc = JSON.parse(copy.prepare("SELECT document FROM stores WHERE id=?").get(row.id).document);
+      assert.equal(restoredDoc.phone, "07-111-2222");
+      assert.deepEqual(restoredDoc.photos, document.photos);
+      assert.equal(readFileSync(join(restored, document.photos[2].slice(1))).toString(), "photo-c");
       assert.equal(copy.prepare("SELECT count(*) AS n FROM stores").get().n, 15);
+      for (const other of untouched) {
+        assert.equal(
+          copy.prepare("SELECT document FROM stores WHERE id=?").get(other.id).document,
+          other.document,
+        );
+      }
     } finally {
       copy.close();
     }

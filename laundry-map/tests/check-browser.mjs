@@ -13,8 +13,9 @@ async function run(script, env = process.env) {
     );
   });
 }
-// The workflow test owns and cleans its own temporary headquarters database.
+// The workflow and album tests own and clean their own temporary databases.
 await run("tests/workflow.mjs");
+await run("tests/album.mjs");
 const dir = mkdtempSync(join(tmpdir(), "mcw-owner-check-"));
 const port = Number(process.env.TEST_MOBILE_PORT || 3100);
 const server = spawn(process.execPath, ["server/index.js"], {
