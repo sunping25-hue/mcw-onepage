@@ -12,12 +12,16 @@ import "leaflet/dist/leaflet.css";
 import "./style.css";
 import taiwanOutline from "./data/taiwan.json";
 import { brandPhotos } from "../shared/brand.js";
-const icon = L.divIcon({
-  className: "pin",
-  html: '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="2" width="16" height="20" rx="3"/><circle cx="12" cy="14" r="5"/><path d="M7 6h2m2 0h6M8 14q4 4 8 0"/></svg></span>',
-  iconSize: [42, 42],
-  iconAnchor: [21, 42],
-});
+const logoHtml = (count) =>
+  `<span class="logo-mark${count ? " cluster-mark" : ""}"><img src="/brand/mcw-round-logo.png" alt="" />${count ? `<b>${count}</b>` : ""}</span>`;
+function storeIcon(selected) {
+  return L.divIcon({
+    className: "pin" + (selected ? " is-selected" : ""),
+    html: logoHtml(),
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+}
 async function api(path, options = {}) {
   const r = await fetch("/api" + path, {
     ...options,
@@ -112,8 +116,9 @@ function MapView({ stores, onSelect, focus }) {
             ]}
             icon={L.divIcon({
               className: "cluster",
-              html: String(g.length),
-              iconSize: [44, 44],
+              html: logoHtml(g.length),
+              iconSize: [48, 48],
+              iconAnchor: [24, 24],
             })}
             eventHandlers={{
               click: () =>
@@ -128,7 +133,7 @@ function MapView({ stores, onSelect, focus }) {
           <Marker
             key={g[0].id}
             position={[g[0].lat, g[0].lng]}
-            icon={icon}
+            icon={storeIcon(false)}
             eventHandlers={{ click: () => onSelect(g[0]) }}
             title={g[0].name}
           />
@@ -212,12 +217,12 @@ function NavigationChooser({ store }) {
         <p>{store.address}</p>
         <div className="actions">
           <LinkButton
-            url={`https://www.google.com/maps/dir/?api=1&destination=${store.lat !== null && store.lng !== null ? `${store.lat},${store.lng}` : encodeURIComponent(store.address)}`}
+            url={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(store.address)}`}
           >
             Google Maps 導航
           </LinkButton>
           <LinkButton
-            url={`https://maps.apple.com/?daddr=${store.lat !== null && store.lng !== null ? `${store.lat},${store.lng}` : encodeURIComponent(store.address)}`}
+            url={`https://maps.apple.com/?daddr=${encodeURIComponent(store.address)}`}
           >
             Apple 地圖導航
           </LinkButton>

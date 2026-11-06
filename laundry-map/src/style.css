@@ -193,31 +193,53 @@ main {
 .leaflet-popup-content {
   color: #172c42;
 }
-.pin {
-  background: linear-gradient(140deg, #0bb3ff, #0667d9);
-  border: 2px solid white;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  box-shadow: 0 3px 15px #0007;
+.leaflet-marker-icon.pin,
+.leaflet-marker-icon.cluster {
+  background: transparent;
+  border: 0;
 }
-.pin span {
+.logo-mark {
+  position: relative;
   display: block;
-  transform: rotate(45deg);
-  font-size: 9px;
-  text-align: center;
-  margin-top: 12px;
-  font-weight: bold;
-  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px #0006;
+  overflow: hidden;
 }
-.cluster {
-  display: grid;
-  place-items: center;
-  background: #0d76d7;
-  color: white;
-  border: 3px solid #a9edff;
-  border-radius: 100%;
-  font-weight: bold;
-  box-shadow: 0 0 0 6px #087cf455;
+.logo-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+}
+.cluster .logo-mark {
+  width: 48px;
+  height: 48px;
+}
+.cluster-mark b {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #071529;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid #17cbff;
+}
+.leaflet-marker-icon.pin:focus-visible .logo-mark,
+.leaflet-marker-icon.pin.is-selected .logo-mark,
+.leaflet-marker-icon.cluster:focus-visible .logo-mark {
+  outline: 3px solid #17cbff;
+  outline-offset: 2px;
 }
 .section-heading {
   display: flex;
@@ -759,29 +781,10 @@ header {
 .leaflet-control-attribution a {
   color: #7fe2ff !important;
 }
-.pin {
-  border-color: #8cefff;
-  background: linear-gradient(145deg, #17cbff, #087cf4);
+.leaflet-marker-icon.pin.is-selected .logo-mark {
   box-shadow:
-    0 0 0 5px #17cbff1c,
-    0 3px 18px #17cbff55;
-}
-.pin span {
-  margin: 5px 0 0 5px;
-  width: 26px;
-  height: 26px;
-  color: #fff;
-}
-.pin svg {
-  width: 26px;
-  height: 26px;
-}
-.cluster {
-  background: radial-gradient(circle at 30% 25%, #198ed2, #0a3760);
-  box-shadow:
-    0 0 0 5px #17cbff22,
-    0 0 20px #17cbff44;
-  border-color: #2ed7ff;
+    0 0 0 3px #fff,
+    0 0 0 6px #ed2435;
 }
 .list-mode {
   grid-template-columns: 1fr;

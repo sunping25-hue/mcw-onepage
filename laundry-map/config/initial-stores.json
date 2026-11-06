@@ -4,104 +4,149 @@
     "batch": "v1",
     "name": "魔彩自助洗衣・屏東新園店",
     "city": "屏東縣",
-    "address": "屏東縣新園鄉仙吉路32號"
+    "address": "屏東縣新園鄉仙吉路32號",
+    "lat": 22.5399592,
+    "lng": 120.4602521,
+    "coordinateNote": "OSM node 12263549233，仙吉路32號門牌點；與北側約34公尺的全聯福利中心節點不同"
   },
   {
     "id": "mcw-kaohsiung-sanmin-dafeng-26",
     "batch": "v1",
     "name": "魔彩自助洗衣・高雄大豐店",
     "city": "高雄市",
-    "address": "高雄市三民區大豐一路26號"
+    "address": "高雄市三民區大豐一路26號",
+    "lat": 22.6544477,
+    "lng": 120.3315108,
+    "coordinateNote": "既有已核實門牌點，不得覆寫"
   },
   {
     "id": "mcw-taoyuan-minsheng-860",
     "batch": "v2",
     "name": "桃園-民生洗衣（衣美專家）",
     "city": "桃園市",
-    "address": "桃園市民生路860號"
+    "address": "桃園市民生路860號",
+    "lat": 25.0101653,
+    "lng": 121.3082513,
+    "coordinateNote": "OSM node 11192855409，桃園區民生路860號"
   },
   {
     "id": "mcw-tainan-guanmiao-zhongzheng-1029",
     "batch": "v2",
     "name": "關廟店",
     "city": "台南市",
-    "address": "台南市關廟區中正路1029號"
+    "address": "台南市關廟區中正路1029號",
+    "lat": 22.9629894,
+    "lng": 120.3264118,
+    "coordinateNote": "OSM node 11060145248，關廟區中正路1029號"
   },
   {
     "id": "mcw-pingtung-defeng-142",
     "batch": "v2",
     "name": "屏東-德豐洗衣（寶朕盈）",
     "city": "屏東縣",
-    "address": "屏東市德豐街142號"
+    "address": "屏東市德豐街142號",
+    "lat": 22.6798393,
+    "lng": 120.5073632,
+    "coordinateNote": "OSM node 12261667415，屏東市德豐街142號"
   },
   {
     "id": "mcw-pingtung-guangdongnan-73",
     "batch": "v2",
     "name": "屏東-廣東南洗衣",
     "city": "屏東縣",
-    "address": "屏東市廣東南路73號"
+    "address": "屏東市廣東南路73號",
+    "lat": 22.6648768,
+    "lng": 120.4909168,
+    "coordinateNote": "OSM node 12261919838，廣東南路73號；鄰近魔彩泡泡自助洗衣店節點"
   },
   {
     "id": "mcw-kaohsiung-fengshan-fucheng-16",
     "batch": "v2",
     "name": "鳳山-福誠洗衣",
     "city": "高雄市",
-    "address": "高雄市鳳山區福誠三街16號"
+    "address": "高雄市鳳山區福誠三街16號",
+    "lat": 22.5941118,
+    "lng": 120.3235658,
+    "coordinateNote": "OSM node 11081207397，鳳山區福誠三街16號"
   },
   {
     "id": "mcw-kaohsiung-daliao-fenglin-29",
     "batch": "v2",
     "name": "大寮-鳳林洗衣",
     "city": "高雄市",
-    "address": "大寮區鳳林三路29號"
+    "address": "大寮區鳳林三路29號",
+    "lat": 22.5949365,
+    "lng": 120.4015404,
+    "coordinateNote": "OSM node 11079999375，大寮區鳳林三路29號，不是29之2號"
   },
   {
     "id": "mcw-pingtung-wandan-zhongxing-111",
     "batch": "v2",
     "name": "萬丹-香社洗衣",
     "city": "屏東縣",
-    "address": "屏東縣萬丹鄉中興路一段111號"
+    "address": "屏東縣萬丹鄉中興路一段111號",
+    "lat": 22.5623947,
+    "lng": 120.4723693,
+    "coordinateNote": "OSM node 12263175061，萬丹鄉香社中興路一段111號"
   },
   {
     "id": "mcw-kaohsiung-daliao-feifan-19",
     "batch": "v2",
     "name": "大寮-非凡洗衣",
     "city": "高雄市",
-    "address": "高雄市大寮區鳳林三路105巷24弄19號"
+    "address": "高雄市大寮區鳳林三路105巷24弄19號",
+    "lat": 22.5966827,
+    "lng": 120.3989645,
+    "coordinateNote": "OSM node 11080015392，鳳林三路105巷24弄19號"
   },
   {
     "id": "mcw-pingtung-dalian-32-4",
     "batch": "v2",
     "name": "屏東-大連洗衣",
     "city": "屏東縣",
-    "address": "屏東市大連路32-4號"
+    "address": "屏東市大連路32-4號",
+    "lat": 22.6835446,
+    "lng": 120.5065824,
+    "coordinateNote": "OSM 門牌32之4號，屏東市大連路華山里，對應32-4號"
   },
   {
     "id": "mcw-kaohsiung-fengshan-wuying-228",
     "batch": "v2",
     "name": "鳳山-武營洗衣",
     "city": "高雄市",
-    "address": "高雄市鳳山區武營路228號"
+    "address": "高雄市鳳山區武營路228號",
+    "lat": 22.6110768,
+    "lng": 120.3375495,
+    "coordinateNote": "OSM node 11081126067，鳳山區武營路228號"
   },
   {
     "id": "mcw-kaohsiung-qianzhen-xianming-19",
     "batch": "v2",
     "name": "前鎮-賢明（淨衣閣）",
     "city": "高雄市",
-    "address": "高雄市前鎮區賢明路19號"
+    "address": "高雄市前鎮區賢明路19號",
+    "lat": 22.6087898,
+    "lng": 120.3242764,
+    "coordinateNote": "OSM node 11082905433，前鎮區賢明路19號"
   },
   {
     "id": "mcw-newtaipei-xizhi-baochang-1",
     "batch": "v2",
     "name": "保長店",
     "city": "新北市",
-    "address": "新北市汐止區保長路19巷1號"
+    "address": "新北市汐止區保長路19巷1號",
+    "lat": 25.080018,
+    "lng": 121.6722903,
+    "coordinateNote": "OSM node 12080469659，汐止區保長路19巷1號"
   },
   {
     "id": "mcw-taichung-nantun-yongchun-18",
     "batch": "v2",
     "name": "台中嶺東店",
     "city": "臺中市",
-    "address": "臺中市南屯區永春南路61巷18號"
+    "address": "臺中市南屯區永春南路61巷18號",
+    "lat": 24.1379121,
+    "lng": 120.6112061,
+    "coordinateNote": "OSM node 8535320180，南屯區永春南路61巷18號"
   }
 ]

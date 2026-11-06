@@ -37,11 +37,18 @@ for (const width of [375, 390, 1280]) {
     "Tile Referer must be the website origin only",
   );
 
-  assert.equal(
-    await page.locator(".pin").count(),
-    0,
-    "Unverified coordinates must not create map markers",
+  const markerLogos = page.locator(".leaflet-marker-icon img");
+  await markerLogos.first().waitFor();
+  const logoSrc = await markerLogos.evaluateAll((els) =>
+    els.map((el) => el.getAttribute("src")),
   );
+  assert.ok(logoSrc.length > 0, "Verified stores must show MCW logo markers");
+  assert.ok(logoSrc.every((src) => src === "/brand/mcw-round-logo.png"));
+  assert.equal(
+    await markerLogos.first().evaluate((el) => getComputedStyle(el).objectFit),
+    "contain",
+  );
+  assert.equal(await page.locator(".pin svg").count(), 0);
   assert.ok(
     (await page.locator(".leaflet-overlay-pane path").count()) > 0,
     "Bundled Taiwan coastline must render when street tiles fail",
