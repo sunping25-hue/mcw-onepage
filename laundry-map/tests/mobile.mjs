@@ -424,6 +424,22 @@ for (const width of [375, 390, 1280]) {
       assert.equal(await machines.getAttribute("href"), MACHINE_URL);
       assert.equal(await machines.getAttribute("target"), "_blank");
       assert.equal(await machines.getAttribute("rel"), "noopener noreferrer");
+      const machinePaint = await machines.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { color: style.color, background: style.backgroundColor };
+      });
+      assert.equal(machinePaint.color, "rgb(255, 255, 255)");
+      assert.equal(machinePaint.background, "rgb(194, 78, 0)");
+      const reviewPaint = await review.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const channelPaint = await channel.evaluate((el) => getComputedStyle(el).backgroundColor);
+      assert.equal(reviewPaint, "rgb(16, 49, 81)");
+      assert.equal(channelPaint, "rgb(204, 0, 0)");
+      await machines.hover();
+      assert.equal(
+        await machines.evaluate((el) => getComputedStyle(el).backgroundColor),
+        "rgb(154, 59, 0)",
+      );
+      await page.mouse.move(0, 0);
       if (width === 1280) {
         const detailUrl = page.url();
         const machinePopupPromise = page.waitForEvent("popup");

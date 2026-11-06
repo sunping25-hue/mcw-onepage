@@ -118,9 +118,10 @@ const tutorialCategories = ["洗脫烘", "雙層烘", "付款", "會員儲值點
 function officialLineUrl(settings) {
   return settings?.lineUrl || OFFICIAL_LINE_URL;
 }
-function LinkButton({ url, children }) {
+function LinkButton({ url, children, className }) {
+  const classes = className ? `button ${className}` : "button";
   return url ? (
-    <a className="button" href={url} target="_blank" rel="noopener noreferrer">
+    <a className={classes} href={url} target="_blank" rel="noopener noreferrer">
       {children} ↗
     </a>
   ) : (
@@ -610,7 +611,9 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
         尚未串接設備，即時狀態暫不可用 · 不提供空機數或倒數預估
       </p>
       {s.machineQueryUrl ? (
-        <LinkButton url={s.machineQueryUrl}>空機查詢</LinkButton>
+        <LinkButton className="machine-query" url={s.machineQueryUrl}>
+          空機查詢
+        </LinkButton>
       ) : null}
       {catalogChips(s.equipment).length ? (
         <div className="equip-chips">

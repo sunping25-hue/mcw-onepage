@@ -552,6 +552,20 @@ footer a {
   color: #fff;
   font-weight: 700;
 }
+.detail a.machine-query {
+  background: #c24e00;
+  border-color: #c24e00;
+  color: #fff;
+  font-weight: 700;
+}
+.detail a.machine-query:hover,
+.detail a.machine-query:focus-visible {
+  background: #9a3b00;
+  border-color: #9a3b00;
+  color: #fff;
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
 .youtube-mark {
   width: 22px;
   height: 16px;
