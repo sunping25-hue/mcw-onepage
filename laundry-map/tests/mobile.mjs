@@ -121,14 +121,50 @@ for (const width of [375, 390, 1280]) {
       .waitFor();
   }
   await page.getByRole("button", { name: /操作教學$/ }).click();
+  await page.getByRole("heading", { name: "認識你的洗衣好幫手", exact: true }).waitFor();
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
+  const featureImg = page.locator(".tutorial-feature > img");
+  assert.equal(await featureImg.getAttribute("src"), "/brand/mcw-22kg-blue.webp");
+  assert.equal(await featureImg.getAttribute("alt"), "MCW 22KG 洗脫烘一體機");
+  const featureLayout = await page.evaluate(() => {
+    const feature = document.querySelector(".tutorial-feature");
+    const img = feature.querySelector(":scope > img");
+    const title = [...feature.querySelectorAll("h2")].find(
+      (node) => node.textContent === "認識你的洗衣好幫手",
+    );
+    const helper = [...document.querySelectorAll("h2")].find(
+      (node) => node.textContent === "你的洗衣小幫手",
+    );
+    const image = img.getBoundingClientRect();
+    const heading = title.getBoundingClientRect();
+    const section = helper.getBoundingClientRect();
+    const style = getComputedStyle(img);
+    return {
+      leftOfTitle: image.right <= heading.left + 1,
+      aboveTutorials: image.bottom <= section.top + 1,
+      objectFit: style.objectFit,
+      ratio: image.width / image.height,
+    };
+  });
+  assert.equal(featureLayout.leftOfTitle, true);
+  assert.equal(featureLayout.aboveTutorials, true);
+  assert.equal(featureLayout.objectFit, "contain");
+  if (width <= 700) {
+    assert.ok(
+      Math.abs(featureLayout.ratio - 923 / 1704) < 0.04,
+      "Phone feature photo should use the supplied 22KG frame",
+    );
+  } else {
+    assert.ok(featureLayout.ratio < 0.8, "Desktop feature photo stays portrait on the left");
+  }
   for (const name of ["洗脫烘操作教學", "雙層烘操作教學", "付款操作教學", "會員儲值點數操作教學"]) {
     await page.getByRole("heading", { name, exact: true }).waitFor();
   }
-  assert.equal(
-    await page.locator(".tutorial-feature img").getAttribute("src"),
-    "/brand/mcw-wash-dry.webp",
-  );
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `artifacts/tutorials-feature-${width}.png`,
+    fullPage: false,
+  });
   const stayed = page.url();
   await page.getByRole("heading", { name: "會員儲值點數操作教學", exact: true }).click();
   assert.equal(page.url(), stayed);

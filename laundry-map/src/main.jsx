@@ -930,10 +930,10 @@ function PublicApp() {
               <section className="content-panel tutorials-panel">
                 <div className="tutorial-feature">
                   <img
-                    src="/brand/mcw-wash-dry.webp"
-                    alt="MCW 洗脫烘一體機實拍"
-                    width="488"
-                    height="900"
+                    src="/brand/mcw-22kg-blue.webp"
+                    alt="MCW 22KG 洗脫烘一體機"
+                    width="923"
+                    height="1704"
                   />
                   <div>
                     <p className="eyebrow">WASH · DRY · READY</p>
