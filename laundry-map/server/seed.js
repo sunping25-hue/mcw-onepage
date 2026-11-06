@@ -54,3 +54,32 @@ export function seedKnownStores(db) {
     throw error;
   }
 }
+
+/** Fill only blank coordinates when the saved address still matches. Never resurrects rows or edits other fields. */
+export function applyVerifiedCoordinates(db) {
+  const select = db.prepare("SELECT document FROM stores WHERE id=?");
+  const update = db.prepare(
+    "UPDATE stores SET document=?,updated_at=? WHERE id=?",
+  );
+  let filled = 0;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const entry of stores) {
+      if (typeof entry.lat !== "number" || typeof entry.lng !== "number") continue;
+      const row = select.get(entry.id);
+      if (!row) continue;
+      const document = JSON.parse(row.document);
+      if (document.address !== entry.address) continue;
+      if (document.lat !== null || document.lng !== null) continue;
+      document.lat = entry.lat;
+      document.lng = entry.lng;
+      update.run(JSON.stringify(document), new Date().toISOString(), entry.id);
+      filled += 1;
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+  return filled;
+}

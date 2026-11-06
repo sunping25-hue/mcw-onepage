@@ -178,10 +178,12 @@ try {
   await page.getByRole("button", { name: "開始導航 ↗", exact: true }).click();
   await page.getByRole("dialog", { name: "選擇導航地圖" }).waitFor();
   assert.match(
-    await page
-      .getByRole("link", { name: "Google Maps 導航 ↗" })
-      .getAttribute("href"),
-    /destination=24,121/,
+    decodeURIComponent(
+      await page
+        .getByRole("link", { name: "Google Maps 導航 ↗" })
+        .getAttribute("href"),
+    ),
+    /destination=測試地址，僅自動測試使用/,
   );
   await page.getByRole("button", { name: "取消導航", exact: true }).click();
   assert.match(

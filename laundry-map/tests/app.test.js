@@ -6,7 +6,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { openDb } from "../server/db.js";
 import { createApp } from "../server/app.js";
-import { seedKnownStores } from "../server/seed.js";
+import { applyVerifiedCoordinates, seedKnownStores } from "../server/seed.js";
 import {
   MachineStatusProvider,
   ManufacturerApiAdapter,
@@ -439,6 +439,61 @@ test("owner-provided stores seed once, retain exact addresses, and do not invent
     );
   } finally {
     seeded.close();
+    rmSync(path, { recursive: true, force: true });
+  }
+});
+
+test("verified coordinates fill only blank matching addresses and keep the Dafeng pin", () => {
+  const path = mkdtempSync(join(tmpdir(), "mcw-coord-test-"));
+  const db = openDb(path);
+  try {
+    seedKnownStores(db);
+    const before = db
+      .prepare("SELECT id,document FROM stores")
+      .all()
+      .map((row) => ({ id: row.id, ...JSON.parse(row.document) }));
+    const dafeng = before.find((store) => store.address === "高雄市三民區大豐一路26號");
+    const xinyuan = before.find((store) => store.address === "屏東縣新園鄉仙吉路32號");
+    dafeng.lat = 22.6544477;
+    dafeng.lng = 120.3315108;
+    dafeng.hours = "總部時段";
+    const dafengDoc = { ...dafeng };
+    delete dafengDoc.id;
+    db.prepare("UPDATE stores SET document=? WHERE id=?").run(
+      JSON.stringify(dafengDoc),
+      dafeng.id,
+    );
+    xinyuan.address = "總部改過的地址";
+    const moved = { ...xinyuan };
+    delete moved.id;
+    db.prepare("UPDATE stores SET document=? WHERE id=?").run(
+      JSON.stringify(moved),
+      xinyuan.id,
+    );
+    db.prepare("DELETE FROM stores WHERE id=?").run(
+      before.find((store) => store.name === "關廟店").id,
+    );
+    assert.equal(applyVerifiedCoordinates(db), 12);
+    const after = db
+      .prepare("SELECT id,document FROM stores")
+      .all()
+      .map((row) => ({ id: row.id, ...JSON.parse(row.document) }));
+    const kept = after.find((store) => store.id === dafeng.id);
+    assert.equal(kept.lat, 22.6544477);
+    assert.equal(kept.lng, 120.3315108);
+    assert.equal(kept.hours, "總部時段");
+    const changed = after.find((store) => store.id === xinyuan.id);
+    assert.equal(changed.address, "總部改過的地址");
+    assert.equal(changed.lat, null);
+    assert.equal(after.some((store) => store.name === "關廟店"), false);
+    assert.ok(
+      after
+        .filter((store) => store.id !== dafeng.id && store.id !== xinyuan.id)
+        .every((store) => typeof store.lat === "number" && typeof store.lng === "number"),
+    );
+    assert.equal(applyVerifiedCoordinates(db), 0);
+  } finally {
+    db.close();
     rmSync(path, { recursive: true, force: true });
   }
 });

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import { openDb } from "./db.js";
 import { createApp } from "./app.js";
-import { seedKnownStores } from "./seed.js";
+import { applyVerifiedCoordinates, seedKnownStores } from "./seed.js";
 import { locateKnownStores } from "./geocode.js";
 import { persistenceFromEnv } from "./persist.js";
 process.chdir(fileURLToPath(new URL("..", import.meta.url)));
@@ -27,6 +27,19 @@ if (persist.configured && !existsSync(join(dataDir, "mcw.sqlite"))) {
 }
 const db = openDb(dataDir);
 seedKnownStores(db);
+const filledCoordinates = applyVerifiedCoordinates(db);
+if (filledCoordinates && persist?.configured && !persist.backupBlocked?.()) {
+  persist
+    .backupFrom(dataDir, db)
+    .then((result) =>
+      console.log("已把補上的門市座標備份到雲端：" + result.snapshotId),
+    )
+    .catch((error) =>
+      console.error("門市座標已保留在本機，雲端備份未完成：" + error.message),
+    );
+} else if (filledCoordinates) {
+  console.log("已補上空白門市座標：" + filledCoordinates + " 家");
+}
 const app = createApp({
   db,
   dataDir,
