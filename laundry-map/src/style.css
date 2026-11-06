@@ -190,6 +190,15 @@ main {
   width: 100%;
   font-family: inherit;
 }
+@media (min-width: 701px) {
+  .map-layout {
+    align-items: start;
+  }
+  .map-wrap,
+  .leaflet-container {
+    height: 460px;
+  }
+}
 .leaflet-popup-content {
   color: #172c42;
 }

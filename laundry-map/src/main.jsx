@@ -11,6 +11,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import taiwanOutline from "./data/taiwan.json";
+import { overviewLatLngs, overviewPadding } from "./taiwan-overview.js";
 import { brandPhotos } from "../shared/brand.js";
 const logoHtml = (count) =>
   `<span class="logo-mark${count ? " cluster-mark" : ""}"><img src="/brand/mcw-round-logo.png" alt="" />${count ? `<b>${count}</b>` : ""}</span>`;
@@ -72,9 +73,33 @@ function LinkButton({ url, children }) {
     </span>
   );
 }
-function Fit({ points, focus }) {
+function Fit({ points, focus, camera }) {
   const map = useMap();
   useEffect(() => {
+    if (camera.mode === "taiwan") {
+      let cancelled = false;
+      let frame = 0;
+      let tries = 0;
+      const apply = () => {
+        if (cancelled) return;
+        const size = map.getSize();
+        if ((size.x < 20 || size.y < 20) && tries < 20) {
+          tries += 1;
+          frame = requestAnimationFrame(apply);
+          return;
+        }
+        map.fitBounds(overviewLatLngs(points), {
+          padding: overviewPadding(size.x, size.y),
+          maxZoom: 8,
+          animate: false,
+        });
+      };
+      apply();
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frame);
+      };
+    }
     if (focus) map.setView(focus, 14, { animate: false });
     else if (points.length)
       map.fitBounds(
@@ -85,16 +110,24 @@ function Fit({ points, focus }) {
   }, [
     JSON.stringify(points.map((p) => [p.id, p.lat, p.lng])),
     JSON.stringify(focus),
+    camera.mode,
+    camera.nonce,
+    map,
   ]);
   return null;
 }
-function MapView({ stores, onSelect, focus }) {
+function MapView({ stores, onSelect, focus, camera }) {
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
   useEffect(() => {
+    const el = map.getContainer();
+    el._mcwMap = map;
     const fn = () => setZoom(map.getZoom());
     map.on("zoomend", fn);
-    return () => map.off("zoomend", fn);
+    return () => {
+      map.off("zoomend", fn);
+      if (el._mcwMap === map) delete el._mcwMap;
+    };
   }, [map]);
   const groups = new Map();
   const cell = zoom < 10 ? 1 : zoom < 13 ? 0.05 : 0;
@@ -139,7 +172,7 @@ function MapView({ stores, onSelect, focus }) {
           />
         ),
       )}
-      <Fit points={stores} focus={focus} />
+      <Fit points={stores} focus={focus} camera={camera} />
     </>
   );
 }
@@ -523,6 +556,7 @@ function PublicApp() {
     [query, setQuery] = useState(""),
     [city, setCity] = useState(""),
     [location, setLocation] = useState(null),
+    [camera, setCamera] = useState({ mode: "auto", nonce: 0 }),
     [geoMsg, setGeoMsg] = useState(""),
     [error, setError] = useState(""),
     [tileError, setTileError] = useState(false),
@@ -580,6 +614,8 @@ function PublicApp() {
         (a.lat !== null && a.lng !== null ? distance(location, a) : Infinity) -
         (b.lat !== null && b.lng !== null ? distance(location, b) : Infinity),
     );
+  const followStores = () =>
+    setCamera((c) => (c.mode === "auto" ? c : { mode: "auto", nonce: c.nonce }));
   function locate() {
     if (!navigator.geolocation) {
       setGeoMsg("瀏覽器不支援定位，請使用縣市或搜尋。");
@@ -589,6 +625,7 @@ function PublicApp() {
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setLocation({ lat: p.coords.latitude, lng: p.coords.longitude });
+        followStores();
         setGeoMsg(
           stores.some((s) => s.lat !== null && s.lng !== null)
             ? "已依距離排序門市"
@@ -660,7 +697,10 @@ function PublicApp() {
                     <input
                       placeholder="輸入門市、地址或縣市"
                       value={query}
-                      onChange={(e) => setQuery(e.target.value)}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        followStores();
+                      }}
                     />
                   </label>
                   <div className="filter-row">
@@ -668,7 +708,10 @@ function PublicApp() {
                       縣市
                       <select
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        onChange={(e) => {
+                          setCity(e.target.value);
+                          followStores();
+                        }}
                       >
                         <option value="">全台灣</option>
                         {[...new Set(stores.map((s) => s.city))]
@@ -680,10 +723,17 @@ function PublicApp() {
                     </label>
                     <button onClick={locate}>◎ 找離我最近</button>
                     <button
+                      type="button"
                       onClick={() => {
                         setCity("");
                         setQuery("");
                         setLocation(null);
+                        setGeoMsg("");
+                        setView("map");
+                        setCamera((c) => ({
+                          mode: "taiwan",
+                          nonce: c.nonce + 1,
+                        }));
                         navigate({ tab: "all", store: null });
                       }}
                     >
@@ -753,6 +803,7 @@ function PublicApp() {
                           )}
                           onSelect={(s) => openStore(s.id)}
                           focus={location ? [location.lat, location.lng] : null}
+                          camera={camera}
                         />
                       </MapContainer>
                       {tileError && (
