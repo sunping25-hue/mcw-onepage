@@ -186,12 +186,17 @@ try {
     /destination=測試地址，僅自動測試使用/,
   );
   await page.getByRole("button", { name: "取消導航", exact: true }).click();
-  assert.match(
-    await page
-      .getByRole("link", { name: "洗脫烘 · 測試教學 ↗" })
-      .getAttribute("href"),
-    /youtube/,
+  const lesson = page.getByRole("link", { name: "洗脫烘 · 測試教學 ↗" });
+  assert.match(await lesson.getAttribute("href"), /youtube/);
+  assert.equal(await lesson.getAttribute("target"), "_blank");
+  const beforeLesson = page.url();
+  await lesson.evaluate((el) =>
+    el.addEventListener("click", (event) => event.preventDefault(), {
+      capture: true,
+    }),
   );
+  await lesson.click();
+  assert.equal(page.url(), beforeLesson);
   const detailUrl = page.url();
   assert.match(detailUrl, /store=/);
   await page.reload();
@@ -276,6 +281,23 @@ try {
     });
   }
   await page.getByRole("button", { name: "← 返回地圖" }).click();
+  await page.getByRole("button", { name: /操作教學$/ }).click();
+  await page.getByRole("heading", { name: "會員儲值點數操作教學", exact: true }).waitFor();
+  const catalogLesson = page.getByRole("link", {
+    name: "DEMO 測試門市（非營運資料） · 測試教學 ↗",
+    exact: true,
+  });
+  await catalogLesson.waitFor();
+  assert.equal(await catalogLesson.getAttribute("target"), "_blank");
+  const tutorialUrl = page.url();
+  await catalogLesson.evaluate((el) =>
+    el.addEventListener("click", (event) => event.preventDefault(), {
+      capture: true,
+    }),
+  );
+  await catalogLesson.click();
+  assert.equal(page.url(), tutorialUrl);
+  await page.getByRole("button", { name: /附近地圖$/ }).click();
   await page.getByRole("button", { name: "◎ 找離我最近" }).click();
   await page.getByText("無法取得定位；你仍可選縣市或搜尋門市。").waitFor();
   await page.getByPlaceholder("輸入門市、地址或縣市").fill("不存在的門市");

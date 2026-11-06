@@ -105,6 +105,22 @@ header {
   background: #091a30;
   gap: 16px;
 }
+.line-join {
+  flex: none;
+}
+.line-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #06c755;
+}
+.line-mark svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
 .brand {
   display: flex;
   align-items: center;
@@ -189,6 +205,15 @@ main {
   min-height: 460px;
   width: 100%;
   font-family: inherit;
+}
+@media (min-width: 701px) {
+  .map-layout {
+    align-items: start;
+  }
+  .map-wrap,
+  .leaflet-container {
+    height: 460px;
+  }
 }
 .leaflet-popup-content {
   color: #172c42;
@@ -961,8 +986,38 @@ header {
 }
 .franchise-photo img {
   width: 100%;
-  height: 320px;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  background: #06101c;
+}
+.franchise-pitch {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 18px;
+}
+.franchise-pitch p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.franchise-contacts {
+  display: grid;
+  gap: 2px;
+}
+.franchise-contacts a {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+}
+.franchise-equipment {
+  width: min(100%, 420px);
+  margin: 4px auto 22px;
+}
+.franchise-equipment img {
+  width: 100%;
+  height: auto;
   display: block;
 }
 .franchise-photo figcaption {
@@ -1044,14 +1099,21 @@ header {
 @media (max-width: 700px) {
   header {
     padding: 10px 16px;
-    height: 68px;
+    height: auto;
+    min-height: 68px;
   }
   .brand > img {
     width: 42px;
     height: 42px;
   }
   .brand {
-    font-size: 0.95rem;
+    font-size: 0.82rem;
+    gap: 8px;
+    min-width: 0;
+  }
+  .line-join {
+    padding: 8px 10px;
+    font-size: 0.85rem;
   }
   .map-page {
     padding: 0 12px 24px;
@@ -1255,7 +1317,7 @@ header {
   .tutorial-feature > img {
     width: 100%;
     height: auto;
-    aspect-ratio: 488 / 900;
+    aspect-ratio: 923 / 1704;
     object-fit: contain;
   }
   .tutorial-feature h2 {
@@ -1273,8 +1335,11 @@ header {
   }
   .franchise-photo img {
     height: auto;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: auto;
     object-fit: contain;
+  }
+  .franchise-pitch p {
+    font-size: 0.92rem;
   }
   .franchise-photo figcaption {
     font-size: 0.62rem;

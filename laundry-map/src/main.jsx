@@ -11,6 +11,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import taiwanOutline from "./data/taiwan.json";
+import { overviewLatLngs, overviewPadding } from "./taiwan-overview.js";
 import { brandPhotos } from "../shared/brand.js";
 const logoHtml = (count) =>
   `<span class="logo-mark${count ? " cluster-mark" : ""}"><img src="/brand/mcw-round-logo.png" alt="" />${count ? `<b>${count}</b>` : ""}</span>`;
@@ -61,6 +62,12 @@ const emptyStore = () => ({
   provider: "unconnected",
   providerReference: "",
 });
+const OFFICIAL_LINE_URL = "https://lin.ee/s4v3cIG";
+const BUSINESS_LINE_URL = "https://line.me/ti/p/~mcw27";
+const tutorialCategories = ["洗脫烘", "雙層烘", "付款", "會員儲值點數"];
+function officialLineUrl(settings) {
+  return settings?.lineUrl || OFFICIAL_LINE_URL;
+}
 function LinkButton({ url, children }) {
   return url ? (
     <a className="button" href={url} target="_blank" rel="noopener noreferrer">
@@ -72,9 +79,59 @@ function LinkButton({ url, children }) {
     </span>
   );
 }
-function Fit({ points, focus }) {
+function LineMark() {
+  return (
+    <span className="line-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path
+          fill="#fff"
+          d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"
+        />
+      </svg>
+    </span>
+  );
+}
+function OfficialLineButton({ url }) {
+  return (
+    <a
+      className="button line-join"
+      href={officialLineUrl({ lineUrl: url })}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="加入官方 LINE"
+    >
+      加入官方
+      <LineMark />
+    </a>
+  );
+}
+function Fit({ points, focus, camera }) {
   const map = useMap();
   useEffect(() => {
+    if (camera.mode === "taiwan") {
+      let cancelled = false;
+      let frame = 0;
+      let tries = 0;
+      const apply = () => {
+        if (cancelled) return;
+        const size = map.getSize();
+        if ((size.x < 20 || size.y < 20) && tries < 20) {
+          tries += 1;
+          frame = requestAnimationFrame(apply);
+          return;
+        }
+        map.fitBounds(overviewLatLngs(points), {
+          padding: overviewPadding(size.x, size.y),
+          maxZoom: 8,
+          animate: false,
+        });
+      };
+      apply();
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frame);
+      };
+    }
     if (focus) map.setView(focus, 14, { animate: false });
     else if (points.length)
       map.fitBounds(
@@ -85,16 +142,24 @@ function Fit({ points, focus }) {
   }, [
     JSON.stringify(points.map((p) => [p.id, p.lat, p.lng])),
     JSON.stringify(focus),
+    camera.mode,
+    camera.nonce,
+    map,
   ]);
   return null;
 }
-function MapView({ stores, onSelect, focus }) {
+function MapView({ stores, onSelect, focus, camera }) {
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
   useEffect(() => {
+    const el = map.getContainer();
+    el._mcwMap = map;
     const fn = () => setZoom(map.getZoom());
     map.on("zoomend", fn);
-    return () => map.off("zoomend", fn);
+    return () => {
+      map.off("zoomend", fn);
+      if (el._mcwMap === map) delete el._mcwMap;
+    };
   }, [map]);
   const groups = new Map();
   const cell = zoom < 10 ? 1 : zoom < 13 ? 0.05 : 0;
@@ -139,7 +204,7 @@ function MapView({ stores, onSelect, focus }) {
           />
         ),
       )}
-      <Fit points={stores} focus={focus} />
+      <Fit points={stores} focus={focus} camera={camera} />
     </>
   );
 }
@@ -387,7 +452,7 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
       if (navigator.share) {
         await navigator.share({
           title: s.name,
-          text: "MCW 洗衣地圖",
+          text: "MCW自助洗衣地圖",
           url: url.href,
         });
         setShareMsg("");
@@ -508,8 +573,8 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
         <p>本店尚未配置操作教學影片。</p>
       )}
       <h2>一起經營好生活</h2>
-      <LinkButton url={s.franchiseUrl || settings.franchiseUrl}>
-        詢問洗衣加盟
+      <LinkButton url={officialLineUrl(settings)}>
+        詢問加盟
       </LinkButton>
     </section>
   );
@@ -523,6 +588,7 @@ function PublicApp() {
     [query, setQuery] = useState(""),
     [city, setCity] = useState(""),
     [location, setLocation] = useState(null),
+    [camera, setCamera] = useState({ mode: "auto", nonce: 0 }),
     [geoMsg, setGeoMsg] = useState(""),
     [error, setError] = useState(""),
     [tileError, setTileError] = useState(false),
@@ -580,6 +646,8 @@ function PublicApp() {
         (a.lat !== null && a.lng !== null ? distance(location, a) : Infinity) -
         (b.lat !== null && b.lng !== null ? distance(location, b) : Infinity),
     );
+  const followStores = () =>
+    setCamera((c) => (c.mode === "auto" ? c : { mode: "auto", nonce: c.nonce }));
   function locate() {
     if (!navigator.geolocation) {
       setGeoMsg("瀏覽器不支援定位，請使用縣市或搜尋。");
@@ -589,6 +657,7 @@ function PublicApp() {
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setLocation({ lat: p.coords.latitude, lng: p.coords.longitude });
+        followStores();
         setGeoMsg(
           stores.some((s) => s.lat !== null && s.lng !== null)
             ? "已依距離排序門市"
@@ -606,10 +675,10 @@ function PublicApp() {
         <a className="brand" href="/">
           <img src="/brand/mcw-round-logo.png" alt="MCW 魔彩正式 Logo" />
           <span>
-            洗衣地圖<small>LAUNDRY MAP</small>
+            MCW自助洗衣地圖<small>LAUNDRY MAP</small>
           </span>
         </a>
-        <LinkButton url={settings.lineUrl}>官方 LINE</LinkButton>
+        <OfficialLineButton url={settings.lineUrl} />
       </header>
       <main
         className={
@@ -660,7 +729,10 @@ function PublicApp() {
                     <input
                       placeholder="輸入門市、地址或縣市"
                       value={query}
-                      onChange={(e) => setQuery(e.target.value)}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        followStores();
+                      }}
                     />
                   </label>
                   <div className="filter-row">
@@ -668,7 +740,10 @@ function PublicApp() {
                       縣市
                       <select
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        onChange={(e) => {
+                          setCity(e.target.value);
+                          followStores();
+                        }}
                       >
                         <option value="">全台灣</option>
                         {[...new Set(stores.map((s) => s.city))]
@@ -680,10 +755,17 @@ function PublicApp() {
                     </label>
                     <button onClick={locate}>◎ 找離我最近</button>
                     <button
+                      type="button"
                       onClick={() => {
                         setCity("");
                         setQuery("");
                         setLocation(null);
+                        setGeoMsg("");
+                        setView("map");
+                        setCamera((c) => ({
+                          mode: "taiwan",
+                          nonce: c.nonce + 1,
+                        }));
                         navigate({ tab: "all", store: null });
                       }}
                     >
@@ -753,6 +835,7 @@ function PublicApp() {
                           )}
                           onSelect={(s) => openStore(s.id)}
                           focus={location ? [location.lat, location.lng] : null}
+                          camera={camera}
                         />
                       </MapContainer>
                       {tileError && (
@@ -847,10 +930,10 @@ function PublicApp() {
               <section className="content-panel tutorials-panel">
                 <div className="tutorial-feature">
                   <img
-                    src="/brand/mcw-wash-dry.webp"
-                    alt="MCW 洗脫烘一體機實拍"
-                    width="488"
-                    height="900"
+                    src="/brand/mcw-22kg-blue.webp"
+                    alt="MCW 22KG 洗脫烘一體機"
+                    width="923"
+                    height="1704"
                   />
                   <div>
                     <p className="eyebrow">WASH · DRY · READY</p>
@@ -861,10 +944,10 @@ function PublicApp() {
                 </div>
                 <p className="eyebrow">MCW HOW-TO</p>
                 <h2>你的洗衣小幫手</h2>
-                {["洗脫烘", "雙層烘", "付款"].map((cat) => (
+                {tutorialCategories.map((cat, index) => (
                   <article className="tutorial" key={cat}>
                     <span className="tutorial-icon" aria-hidden="true">
-                      {cat === "洗脫烘" ? "01" : cat === "雙層烘" ? "02" : "03"}
+                      {String(index + 1).padStart(2, "0")}
                     </span>
                     <div>
                       <h3>{cat}操作教學</h3>
@@ -898,14 +981,11 @@ function PublicApp() {
               <section className="content-panel franchise">
                 <figure className="franchise-photo">
                   <img
-                    src="/brand/hualien-store-1.webp"
-                    alt="交接包提供的花蓮門市外觀實拍"
-                    width="1100"
-                    height="825"
+                    src="/brand/community-lineup.webp"
+                    alt="MCW 洗脫烘一體機，16、22、27、35KG，不鏽鋼色、珍珠白、無限藍、鈦銀、寶石紅、宇宙黑"
+                    width="1672"
+                    height="941"
                   />
-                  <figcaption>
-                    花蓮門市實拍 · 地址與營運資訊待總部確認
-                  </figcaption>
                 </figure>
                 <p className="eyebrow">START YOUR MCW JOURNEY</p>
                 <h2>
@@ -917,14 +997,52 @@ function PublicApp() {
                   想了解 MCW
                   洗衣設備、開店流程與加盟資訊？透過總部指定管道，開始你的開店計畫。
                 </p>
-                <LinkButton url={settings.franchiseUrl}>
-                  詢問洗衣加盟
+                <div className="franchise-pitch">
+                  <p>💎為什麼選擇 MCW 洗脫烘？</p>
+                  <p>
+                    頂級商用規格：機種款式尺寸齊全（16、22、27、35KG），多款時尚美學色彩供選擇（珍珠白、無限藍、鈦銀、寶石紅、宇宙黑、不銹鋼色）。
+                  </p>
+                  <p>
+                    💎 國際品質認證：通過 CE、ISO 9001、ISO 45001、ISO 14001
+                    國際認證，擁有多項技術專利，成功打入美國市場的高品質外銷機種。高效節能耐用，專為商用專業首選打造，讓洗衣體驗更聰明、更美好。
+                  </p>
+                  <p>💎 誠摯邀請您加入加盟合作行列！</p>
+                  <p className="franchise-contacts">
+                    <a
+                      href={officialLineUrl(settings)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      加入官方LINE：@mcw27
+                    </a>
+                    <a
+                      href={BUSINESS_LINE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      業務LINE：mcw27
+                    </a>
+                    <a href="tel:077881902">加盟專線：07-788-1902</a>
+                  </p>
+                </div>
+                <figure className="franchise-equipment">
+                  <img
+                    src="/brand/mcw-22kg-blue.webp"
+                    alt="MCW 22KG 洗脫烘一體機"
+                    width="923"
+                    height="1704"
+                  />
+                </figure>
+                <LinkButton url={officialLineUrl(settings)}>
+                  詢問加盟
                 </LinkButton>
                 <div className="brand-guide">
                   <img src="/brand/mcw-cat.webp" alt="MCW 藍白貓咪吉祥物" />
                   <p>
                     從空間規劃到設備選擇，
                     <br />與 MCW 一起打造社區的洗衣好鄰居。
+                    <br />
+                    加盟MCW就是你的最佳選擇!
                   </p>
                 </div>
                 <p className="muted">
@@ -1510,7 +1628,7 @@ function Admin() {
                       updateItem("tutorials", i, "category", e.target.value)
                     }
                   >
-                    {["洗脫烘", "雙層烘", "付款"].map((x) => (
+                    {tutorialCategories.map((x) => (
                       <option key={x}>{x}</option>
                     ))}
                   </select>

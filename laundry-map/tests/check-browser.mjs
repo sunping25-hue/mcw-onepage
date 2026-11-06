@@ -61,6 +61,10 @@ try {
     ...process.env,
     TEST_BASE_URL: `http://127.0.0.1:${port}`,
   });
+  await run("tests/taiwan-overview.mjs", {
+    ...process.env,
+    TEST_BASE_URL: `http://127.0.0.1:${port}`,
+  });
   console.log(
     "Both browser suites passed. Production fixture and isolated data are cleaned up.",
   );

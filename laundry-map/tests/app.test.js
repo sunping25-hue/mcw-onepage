@@ -175,6 +175,30 @@ test("image upload decodes actual bytes, strips metadata and rejects malformed i
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type"), /webp/);
 });
+test("member points tutorial category is allowed and still requires YouTube", () => {
+  assert.equal(
+    storeSchema.safeParse({
+      ...doc,
+      tutorials: [
+        {
+          category: "會員儲值點數",
+          title: "儲值教學",
+          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        },
+      ],
+    }).success,
+    true,
+  );
+  assert.equal(
+    storeSchema.safeParse({
+      ...doc,
+      tutorials: [
+        { category: "會員儲值點數", title: "儲值教學", url: "https://example.com/v" },
+      ],
+    }).success,
+    false,
+  );
+});
 test("URL validation rejects executable URLs and non-YouTube tutorials", () => {
   assert.equal(
     storeSchema.safeParse({ ...doc, aiUrl: "javascript:alert(1)" }).success,
