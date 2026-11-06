@@ -737,6 +737,96 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
     </section>
   );
 }
+function MascotVideo() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return undefined;
+    const kick = () => {
+      if (!video.muted || video.volume !== 0) {
+        video.muted = true;
+        video.defaultMuted = true;
+        video.volume = 0;
+      }
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      if (video.paused && !document.hidden) {
+        const pending = video.play();
+        if (pending && typeof pending.catch === "function") pending.catch(() => {});
+      }
+    };
+    kick();
+    const onPause = () => {
+      if (!document.hidden) setTimeout(kick, 300);
+    };
+    video.addEventListener("pause", onPause);
+    video.addEventListener("volumechange", kick);
+    const onVisible = () => {
+      if (!document.hidden) kick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const once = () => kick();
+    for (const event of ["touchstart", "pointerdown", "scroll"]) {
+      window.addEventListener(event, once, { passive: true, once: true });
+    }
+    let observer;
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) kick();
+        },
+        { threshold: 0.1 },
+      );
+      observer.observe(video);
+    }
+    return () => {
+      video.removeEventListener("pause", onPause);
+      video.removeEventListener("volumechange", kick);
+      document.removeEventListener("visibilitychange", onVisible);
+      for (const event of ["touchstart", "pointerdown", "scroll"]) {
+        window.removeEventListener(event, once);
+      }
+      observer?.disconnect();
+    };
+  }, []);
+  return (
+    <figure className="mascot-video">
+      <figcaption id="mascot-video-title">MCW 吉祥物動畫</figcaption>
+      <span className="mascot-video-mask">
+        <video
+          className="mascot-video-player"
+          ref={(node) => {
+            ref.current = node;
+            if (!node) return;
+            node.muted = true;
+            node.defaultMuted = true;
+            node.volume = 0;
+          }}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          disableRemotePlayback
+          poster="/brand/mcw-mascot-3d-poster.jpg"
+          width="544"
+          height="544"
+          tabIndex={-1}
+          aria-labelledby="mascot-video-title"
+          aria-describedby="mascot-video-desc"
+        >
+          <source src="/brand/mcw-mascot-3d.webm" type='video/webm; codecs="vp9"' />
+          <source src="/brand/mcw-mascot-3d.mp4" type="video/mp4" />
+          您的瀏覽器無法播放這段動畫。
+        </video>
+      </span>
+      <p id="mascot-video-desc">
+        MCW 藍白貓咪吉祥物的十五秒立體動畫，自動靜音循環播放。
+      </p>
+    </figure>
+  );
+}
 function PublicApp() {
   const [{ tab, store: selected }, navigate, backToMap] = useRoute();
   const openStore = (id) => navigate({ tab, store: id });
@@ -1094,25 +1184,7 @@ function PublicApp() {
             )}
             {tab === "tutorials" && (
               <section className="content-panel tutorials-panel">
-                <figure className="mascot-video">
-                  <figcaption id="mascot-video-title">MCW 吉祥物動畫</figcaption>
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster="/brand/mcw-mascot-3d-poster.jpg"
-                    width="544"
-                    height="544"
-                    aria-labelledby="mascot-video-title"
-                    aria-describedby="mascot-video-desc"
-                  >
-                    <source src="/brand/mcw-mascot-3d.mp4" type="video/mp4" />
-                    您的瀏覽器無法播放這段 MP4 動畫。
-                  </video>
-                  <p id="mascot-video-desc">
-                    MCW 藍白貓咪吉祥物的十五秒立體動畫。按下播放才會開始，播放時才會有聲音。
-                  </p>
-                </figure>
+                <MascotVideo />
                 <div className="tutorial-feature">
                   <img
                     src="/brand/mcw-22kg-blue.webp"

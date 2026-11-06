@@ -212,34 +212,90 @@ for (const width of [375, 390, 1280]) {
   await page.getByRole("heading", { name: "認識你的洗衣好幫手", exact: true }).waitFor();
   const mascot = page.locator(".mascot-video video");
   await mascot.waitFor();
-  assert.equal(await mascot.evaluate((el) => el.autoplay), false);
-  assert.equal(await mascot.evaluate((el) => el.loop), false);
-  assert.equal(await mascot.evaluate((el) => el.muted), false);
-  assert.equal(await mascot.evaluate((el) => el.controls), true);
-  assert.equal(await mascot.evaluate((el) => el.paused), true);
   assert.equal(
-    await mascot.locator("source").getAttribute("src"),
-    "/brand/mcw-mascot-3d.mp4",
+    await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches),
+    false,
   );
-  assert.equal(
-    await mascot.locator("source").getAttribute("type"),
-    "video/mp4",
+  assert.equal(await mascot.evaluate((el) => el.autoplay), true);
+  assert.equal(await mascot.evaluate((el) => el.loop), true);
+  assert.equal(await mascot.evaluate((el) => el.muted), true);
+  assert.equal(await mascot.evaluate((el) => el.volume), 0);
+  assert.equal(await mascot.evaluate((el) => el.controls), false);
+  assert.equal(await mascot.evaluate((el) => el.hasAttribute("controls")), false);
+  assert.equal(await mascot.evaluate((el) => el.playsInline), true);
+  assert.equal(await page.locator(".mascot-video button, .mascot-video [aria-label*='暫停']").count(), 0);
+  assert.equal(await mascot.evaluate((el) => el.tabIndex), -1);
+  assert.equal(await mascot.evaluate((el) => el.disablePictureInPicture), true);
+  await page.waitForFunction(() => {
+    const el = document.querySelector(".mascot-video video");
+    return !!el && !el.paused && el.currentTime > 0.15 && el.muted && el.volume === 0;
+  });
+  const startedAt = await mascot.evaluate((el) => el.currentTime);
+  await page.waitForTimeout(350);
+  const laterAt = await mascot.evaluate((el) => el.currentTime);
+  assert.ok(laterAt > startedAt, "Muted mascot video keeps playing");
+  const sources = await mascot.locator("source").evaluateAll((els) =>
+    els.map((el) => ({ src: el.getAttribute("src"), type: el.getAttribute("type") })),
   );
+  assert.deepEqual(sources, [
+    { src: "/brand/mcw-mascot-3d.webm", type: 'video/webm; codecs="vp9"' },
+    { src: "/brand/mcw-mascot-3d.mp4", type: "video/mp4" },
+  ]);
+  const playback = await mascot.evaluate((el) => ({
+    current: el.currentSrc,
+    canH264: el.canPlayType('video/mp4; codecs="avc1.42E01E"'),
+    canVp9: el.canPlayType('video/webm; codecs="vp9"'),
+  }));
+  assert.ok(
+    playback.current.includes("/brand/mcw-mascot-3d.webm") ||
+      playback.current.includes("/brand/mcw-mascot-3d.mp4"),
+    playback.current,
+  );
+  if (!playback.canH264) {
+    assert.ok(playback.current.includes(".webm"), playback.current);
+    assert.ok(playback.canVp9, "Headless Chromium must be able to decode the VP9 copy");
+  }
   assert.equal(
     await mascot.getAttribute("poster"),
     "/brand/mcw-mascot-3d-poster.jpg",
   );
   await page.getByText("MCW 吉祥物動畫", { exact: true }).waitFor();
   await page
-    .getByText(
-      "MCW 藍白貓咪吉祥物的十五秒立體動畫。按下播放才會開始，播放時才會有聲音。",
-      { exact: true },
-    )
+    .getByText("MCW 藍白貓咪吉祥物的十五秒立體動畫，自動靜音循環播放。", {
+      exact: true,
+    })
     .waitFor();
+  assert.equal(await page.getByText("按下播放", { exact: false }).count(), 0);
+  assert.equal(await page.getByText("才會有聲音", { exact: false }).count(), 0);
   const mascotBox = await mascot.boundingBox();
   assert.ok(mascotBox.width <= 300, "Mascot video stays a modest width");
   assert.ok(mascotBox.width < width * 0.9, "Mascot video does not fill the viewport");
   assert.ok(mascotBox.width >= 160, "Mascot video stays large enough to use");
+  const blend = await page.evaluate(() => {
+    const mask = document.querySelector(".mascot-video-mask");
+    const video = mask.querySelector("video");
+    const maskStyle = getComputedStyle(mask);
+    const videoStyle = getComputedStyle(video);
+    return {
+      mask: maskStyle.maskImage || maskStyle.webkitMaskImage || "",
+      composite: maskStyle.maskComposite || maskStyle.webkitMaskComposite || "",
+      videoBackground: videoStyle.backgroundColor,
+      border: videoStyle.borderTopWidth,
+      radius: videoStyle.borderTopLeftRadius,
+      shadow: videoStyle.boxShadow,
+      pointer: maskStyle.pointerEvents,
+    };
+  });
+  assert.match(blend.mask, /linear-gradient/i);
+  assert.match(blend.mask, /8%/);
+  assert.equal(blend.videoBackground, "rgba(0, 0, 0, 0)");
+  assert.equal(blend.border, "0px");
+  assert.equal(blend.radius, "0px");
+  assert.equal(blend.shadow, "none");
+  assert.equal(blend.pointer, "none");
+  await page.locator(".mascot-video").screenshot({
+    path: `artifacts/mascot-video-${width}.png`,
+  });
   assert.equal(
     await page.evaluate(() => {
       const video = document.querySelector(".mascot-video");
@@ -259,6 +315,41 @@ for (const width of [375, 390, 1280]) {
     const poster = await fetch(new URL("/brand/mcw-mascot-3d-poster.jpg", page.url()));
     assert.equal(poster.status, 200);
     assert.match(poster.headers.get("content-type") || "", /image/);
+    const webm = await fetch(new URL("/brand/mcw-mascot-3d.webm", page.url()), {
+      headers: { Range: "bytes=0-3" },
+    });
+    assert.ok(webm.status === 200 || webm.status === 206);
+    assert.match(webm.headers.get("content-type") || "", /webm|video/);
+    const webmBytes = new Uint8Array(await webm.arrayBuffer());
+    assert.deepEqual([...webmBytes.slice(0, 4)], [0x1a, 0x45, 0xdf, 0xa3]);
+    const reduced = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+    });
+    try {
+      const reducedPage = await reduced.newPage();
+      await reducedPage.goto(baseUrl + "/?tab=tutorials");
+      const reducedVideo = reducedPage.locator(".mascot-video video");
+      await reducedVideo.waitFor();
+      await reducedPage.waitForFunction(() => {
+        const el = document.querySelector(".mascot-video video");
+        return !!el && !el.paused && el.currentTime > 0.15 && el.muted && el.volume === 0;
+      });
+      const reducedState = await reducedVideo.evaluate((el) => ({
+        paused: el.paused,
+        autoplay: el.autoplay,
+        muted: el.muted,
+        volume: el.volume,
+        controls: el.controls,
+      }));
+      assert.equal(reducedState.paused, false);
+      assert.equal(reducedState.autoplay, true);
+      assert.equal(reducedState.muted, true);
+      assert.equal(reducedState.volume, 0);
+      assert.equal(reducedState.controls, false);
+    } finally {
+      await reduced.close();
+    }
   }
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
   const featureImg = page.locator(".tutorial-feature > img");
@@ -496,6 +587,11 @@ for (const width of [375, 390, 1280]) {
         await machines.click();
         const machinePopup = await machinePopupPromise;
         await machinePopup.waitForLoadState("domcontentloaded");
+        await machinePopup.waitForURL(
+          (url) =>
+            url.href.startsWith(MACHINE_URL) ||
+            url.href.includes("waitershop.betcoin.tw/Home/Index"),
+        );
         assert.equal(page.url(), detailUrl);
         const landed = machinePopup.url();
         assert.ok(
@@ -510,6 +606,7 @@ for (const width of [375, 390, 1280]) {
         await channel.click();
         const channelPopup = await channelPopupPromise;
         await channelPopup.waitForLoadState("domcontentloaded");
+        await channelPopup.waitForURL((url) => url.href.includes("youtube.com"));
         assert.equal(page.url(), detailUrl);
         assert.ok(channelPopup.url().includes("youtube.com"), channelPopup.url());
         await channelPopup.close();
