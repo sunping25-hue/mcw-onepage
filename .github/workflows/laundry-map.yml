@@ -24,7 +24,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      # ubuntu-24.04 already has Playwright's shared libraries. `--with-deps`
+      # runs apt-get, which has stalled until the 15-minute job timeout.
+      - name: Install Playwright Chromium
+        timeout-minutes: 4
+        run: npx playwright install chromium
       - name: Check phone workflows against real local services
         run: |
           export CHROMIUM_PATH="$(node --input-type=module -e 'import {chromium} from "playwright"; console.log(chromium.executablePath())')"
