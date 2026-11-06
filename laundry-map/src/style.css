@@ -1161,6 +1161,29 @@ header {
   padding: 5px 8px;
   color: #9fcee4;
 }
+.mascot-video {
+  width: min(280px, 78%);
+  margin: 0 auto 28px;
+  text-align: center;
+}
+.mascot-video video {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  display: block;
+  border: 1px solid #2a5475;
+  border-radius: 16px;
+  background: #071529;
+}
+.mascot-video figcaption {
+  margin-bottom: 8px;
+  color: white;
+  font-weight: 700;
+}
+.mascot-video p {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
 .tutorial-icon {
   background: linear-gradient(130deg, #087cf4, #174b79);
   color: #a7eaff;
