@@ -64,6 +64,10 @@ const emptyStore = () => ({
 });
 const OFFICIAL_LINE_URL = "https://lin.ee/s4v3cIG";
 const BUSINESS_LINE_URL = "https://line.me/ti/p/~mcw27";
+const FRANCHISE_PAGE_URL = "https://sunping25-hue.github.io/mcw-onepage/";
+const MCW_SITE_URL = "https://www.magicbubble-laundry.com/";
+const FACEBOOK_PAGE_URL =
+  "https://www.facebook.com/share/1JCJbVjMGW/?mibextid=wwXIfr";
 const tutorialCategories = ["洗脫烘", "雙層烘", "付款", "會員儲值點數"];
 function officialLineUrl(settings) {
   return settings?.lineUrl || OFFICIAL_LINE_URL;
@@ -86,6 +90,18 @@ function LineMark() {
         <path
           fill="#fff"
           d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"
+        />
+      </svg>
+    </span>
+  );
+}
+function FacebookMark() {
+  return (
+    <span className="fb-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path
+          fill="#fff"
+          d="M22 12.07C22 6.5 17.52 2 12 2S2 6.5 2 12.07C2 17.1 5.66 21.24 10.44 22v-7.03H7.9v-2.9h2.54V9.84c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.9h-2.34V22C18.34 21.24 22 17.1 22 12.07z"
         />
       </svg>
     </span>
@@ -698,6 +714,17 @@ function PublicApp() {
         ) : (
           <>
             <div className="hero">
+              {tab === "franchise" && (
+                <a
+                  className="franchise-fb"
+                  href={FACEBOOK_PAGE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FacebookMark />
+                  FB粉專
+                </a>
+              )}
               <p className="eyebrow">CLEAN CLOTHES. CLEAR MIND.</p>
               <h1>
                 {tab === "tutorials"
@@ -1036,6 +1063,24 @@ function PublicApp() {
                 <LinkButton url={officialLineUrl(settings)}>
                   詢問加盟
                 </LinkButton>
+                <div className="franchise-more">
+                  <a
+                    className="button"
+                    href={FRANCHISE_PAGE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    了解更多訊息
+                  </a>
+                  <a
+                    className="button"
+                    href={MCW_SITE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    MCW官網
+                  </a>
+                </div>
                 <div className="brand-guide">
                   <img src="/brand/mcw-cat.webp" alt="MCW 藍白貓咪吉祥物" />
                   <p>

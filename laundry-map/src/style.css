@@ -153,6 +153,36 @@ main {
 .hero {
   padding: 40px 0 18px;
 }
+.franchise-fb {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 10px;
+  width: fit-content;
+  margin-left: auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid #326287;
+  border-radius: 10px;
+  background: #103151;
+  color: #ecfaff;
+}
+.fb-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #1877f2;
+  flex: none;
+}
+.fb-mark svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
 .hero p {
   margin-bottom: 12px;
 }
@@ -1019,6 +1049,17 @@ header {
   width: 100%;
   height: auto;
   display: block;
+}
+.franchise-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  max-width: 100%;
+}
+.franchise-more .button {
+  flex: 1 1 160px;
+  max-width: 100%;
 }
 .franchise-photo figcaption {
   position: absolute;

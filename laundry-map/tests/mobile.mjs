@@ -28,6 +28,7 @@ for (const width of [375, 390, 1280]) {
   assert.equal(await official.getAttribute("href"), "https://lin.ee/s4v3cIG");
   assert.equal(await official.getAttribute("target"), "_blank");
   assert.equal(await page.locator("nav.fab, .f-tel").count(), 0);
+  assert.equal(await page.locator(".franchise-fb").count(), 0);
   assert.equal(await page.locator('a[href^="tel:"]').count(), 0);
 
   await page
@@ -191,11 +192,65 @@ for (const width of [375, 390, 1280]) {
     await page.locator(".franchise-equipment img").getAttribute("src"),
     "/brand/mcw-22kg-blue.webp",
   );
+  const linkLayout = await page.evaluate(() => {
+    const ask = [...document.querySelectorAll("a")].find(
+      (node) => node.textContent.trim() === "詢問加盟 ↗",
+    );
+    const more = document.querySelector(".franchise-more");
+    const fb = document.querySelector(".franchise-fb");
+    const heroTitle = [...document.querySelectorAll("h1")].find((node) =>
+      node.textContent.includes("把好生活"),
+    );
+    const askBox = ask.getBoundingClientRect();
+    const moreBox = more.getBoundingClientRect();
+    const fbBox = fb.getBoundingClientRect();
+    const titleBox = heroTitle.getBoundingClientRect();
+    return {
+      moreBelowAsk: moreBox.top >= askBox.bottom - 1,
+      fbAboveTitle: fbBox.bottom <= titleBox.top + 1,
+      moreInside: moreBox.right <= document.documentElement.clientWidth + 1,
+    };
+  });
+  assert.equal(linkLayout.moreBelowAsk, true);
+  assert.equal(linkLayout.fbAboveTitle, true);
+  assert.equal(linkLayout.moreInside, true);
+  const fb = page.getByRole("link", { name: "FB粉專", exact: true });
+  assert.equal(
+    await fb.getAttribute("href"),
+    "https://www.facebook.com/share/1JCJbVjMGW/?mibextid=wwXIfr",
+  );
+  assert.equal(await fb.getAttribute("target"), "_blank");
+  assert.equal(await page.getByText("連結整理中").count(), 0);
+  const moreInfo = page.getByRole("link", { name: "了解更多訊息", exact: true });
+  const site = page.getByRole("link", { name: "MCW官網", exact: true });
+  assert.equal(
+    await moreInfo.getAttribute("href"),
+    "https://sunping25-hue.github.io/mcw-onepage/",
+  );
+  assert.equal(await moreInfo.getAttribute("target"), "_blank");
+  assert.equal(
+    await site.getAttribute("href"),
+    "https://www.magicbubble-laundry.com/",
+  );
+  assert.equal(await site.getAttribute("target"), "_blank");
   const franchiseUrl = page.url();
   await ask.evaluate((el) =>
     el.addEventListener("click", (event) => event.preventDefault(), { capture: true }),
   );
   await ask.click();
+  assert.equal(page.url(), franchiseUrl);
+  await moreInfo.evaluate((el) =>
+    el.addEventListener("click", (event) => event.preventDefault(), { capture: true }),
+  );
+  await moreInfo.click();
+  await site.evaluate((el) =>
+    el.addEventListener("click", (event) => event.preventDefault(), { capture: true }),
+  );
+  await site.click();
+  await fb.evaluate((el) =>
+    el.addEventListener("click", (event) => event.preventDefault(), { capture: true }),
+  );
+  await fb.click();
   assert.equal(page.url(), franchiseUrl);
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
