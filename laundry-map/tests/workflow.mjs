@@ -58,6 +58,8 @@ try {
   await page.getByRole("button", { name: "儲存入口" }).click();
   await page.getByText("總部入口已更新").waitFor();
   await page.getByRole("button", { name: "＋ 新增分店" }).click();
+  assert.equal(await page.getByLabel("營業時間", { exact: true }).inputValue(), "24小時");
+  assert.equal(await page.getByLabel("開店狀態", { exact: true }).inputValue(), "open");
   await page
     .getByLabel("門市名稱", { exact: true })
     .fill("DEMO 測試門市（非營運資料）");
@@ -96,6 +98,24 @@ try {
     .getByLabel("AI 智慧店長網址（僅連結）")
     .fill("https://example.com/manager");
   await page.getByLabel("Google 評價網址").fill("https://example.com/review");
+  await page.getByLabel("洗脫烘 16KG 台數").fill("5");
+  await page.getByLabel("洗脫烘 22KG 台數").fill("0");
+  await page.getByLabel("無 API 時的查詢方式").selectOption("button");
+  await page.getByLabel("機台查詢網址").fill("https://example.com/machines");
+  await page.getByLabel("洗脫烘 16KG 台數").scrollIntoViewIfNeeded();
+  await page.setViewportSize({ width: 375, height: 812 });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
+  await page.screenshot({ path: "artifacts/admin-machine-counts-375.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "artifacts/admin-machine-counts-390.png" });
+  await page.getByLabel("機台查詢網址").scrollIntoViewIfNeeded();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.screenshot({ path: "artifacts/admin-machine-query-375.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "artifacts/admin-machine-query-390.png" });
   await page.getByRole("button", { name: "儲存門市", exact: true }).click();
   await page.getByText("門市已儲存；公開且已確認的內容會反映於前台").waitFor();
   await page.getByRole("button", { name: "立即備份", exact: true }).click();
@@ -159,6 +179,19 @@ try {
     .getByRole("heading", { name: "DEMO 測試門市（非營運資料）" })
     .waitFor();
   await page.getByText("未知／未連線").waitFor();
+  await page.getByText("洗脫烘 16KG｜5台", { exact: true }).waitFor();
+  assert.equal(await page.getByText("洗脫烘 22KG｜0台").count(), 0);
+  assert.equal(await page.getByText("本店尚未配置操作教學影片。").count(), 0);
+  const channel = page.getByRole("link", { name: "YouTube 操作教學", exact: true });
+  assert.equal(
+    await channel.getAttribute("href"),
+    "https://www.youtube.com/@%E9%AD%94%E5%BD%A9%E8%87%AA%E5%8A%A9%E6%B4%97%E8%A1%A3%E5%8A%A0%E7%9B%9F",
+  );
+  assert.equal(await channel.getAttribute("target"), "_blank");
+  const machines = page.getByRole("link", { name: "空機查詢 ↗", exact: true });
+  assert.equal(await machines.getAttribute("href"), "https://example.com/machines");
+  assert.equal(await machines.getAttribute("target"), "_blank");
+  assert.equal(await machines.getAttribute("rel"), "noopener noreferrer");
   await page.getByRole("button", { name: "下一張照片" }).click();
   assert.equal(
     await page.locator(".photo-carousel>img").getAttribute("src"),

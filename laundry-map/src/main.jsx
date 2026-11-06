@@ -13,6 +13,15 @@ import "./style.css";
 import taiwanOutline from "./data/taiwan.json";
 import { overviewLatLngs, overviewPadding } from "./taiwan-overview.js";
 import { brandPhotos } from "../shared/brand.js";
+import {
+  DEFAULT_STORE_HOURS,
+  EQUIPMENT_TYPES,
+  MACHINE_CATALOG,
+  OFFICIAL_YOUTUBE_CHANNEL_URL,
+  catalogChips,
+  countEquipmentId,
+  isPlainCatalogCount,
+} from "../shared/storefront.js";
 const logoHtml = (count) =>
   `<span class="logo-mark${count ? " cluster-mark" : ""}"><img src="/brand/mcw-round-logo.png" alt="" />${count ? `<b>${count}</b>` : ""}</span>`;
 function storeIcon(selected) {
@@ -43,11 +52,11 @@ async function api(path, options = {}) {
 }
 const emptyStore = () => ({
   name: "",
-  openingStatus: "unknown",
+  openingStatus: "open",
   city: "",
   address: "",
   phone: "",
-  hours: "",
+  hours: DEFAULT_STORE_HOURS,
   announcement: "",
   lat: null,
   lng: null,
@@ -59,9 +68,46 @@ const emptyStore = () => ({
   aiUrl: "",
   reviewUrl: "",
   franchiseUrl: "",
+  machineQueryMode: "off",
+  machineQueryUrl: "",
   provider: "unconnected",
   providerReference: "",
 });
+function editorStore(store) {
+  return {
+    ...store,
+    openingStatus:
+      store.openingStatus && store.openingStatus !== "unknown"
+        ? store.openingStatus
+        : "open",
+    hours: store.hours?.trim() ? store.hours : DEFAULT_STORE_HOURS,
+    machineQueryMode: store.machineQueryMode === "button" ? "button" : "off",
+    machineQueryUrl: store.machineQueryUrl || "",
+  };
+}
+function withCatalogCount(equipment, type, kg, raw) {
+  const id = countEquipmentId(type, kg);
+  const rest = equipment.filter((entry) => entry.id !== id);
+  if (raw === "" || raw === "0") return rest;
+  if (!/^\d+$/.test(raw)) return equipment;
+  const quantity = Number(raw);
+  if (quantity < 1 || quantity > 1000) return equipment;
+  return [
+    ...rest,
+    {
+      id,
+      type,
+      capacity: `${kg}KG`,
+      quantity,
+      model: "",
+      number: "",
+      specification: "",
+      photos: [],
+      price: "",
+      providerKey: "",
+    },
+  ];
+}
 const OFFICIAL_LINE_URL = "https://lin.ee/s4v3cIG";
 const BUSINESS_LINE_URL = "https://line.me/ti/p/~mcw27";
 const FRANCHISE_PAGE_URL = "https://sunping25-hue.github.io/mcw-onepage/";
@@ -72,9 +118,10 @@ const tutorialCategories = ["洗脫烘", "雙層烘", "付款", "會員儲值點
 function officialLineUrl(settings) {
   return settings?.lineUrl || OFFICIAL_LINE_URL;
 }
-function LinkButton({ url, children }) {
+function LinkButton({ url, children, className }) {
+  const classes = className ? `button ${className}` : "button";
   return url ? (
-    <a className="button" href={url} target="_blank" rel="noopener noreferrer">
+    <a className={classes} href={url} target="_blank" rel="noopener noreferrer">
       {children} ↗
     </a>
   ) : (
@@ -243,8 +290,28 @@ const openingLabels = {
   open: "營業中",
   planned: "籌備中",
   temporarily_closed: "暫停營業",
-  unknown: "營業狀態待確認",
 };
+function openingLabel(status) {
+  return openingLabels[status] || "營業中";
+}
+function OpeningBadge({ status }) {
+  const label = openingLabel(status);
+  return (
+    <span className={label === "營業中" ? "opening-badge" : undefined}>
+      {label}
+    </span>
+  );
+}
+function YouTubeMark() {
+  return (
+    <span className="youtube-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 18">
+        <rect x="0.5" y="0.5" width="23" height="17" rx="4" fill="#fff" />
+        <path d="M10 5.2v7.6L16.4 9z" fill="#cc0000" />
+      </svg>
+    </span>
+  );
+}
 const allowedTabs = ["near", "all", "favorites", "tutorials", "franchise"];
 function readRoute() {
   const params = new URLSearchParams(window.location.search);
@@ -510,7 +577,7 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
       <p className="eyebrow">MCW LAUNDRY / {s.city}</p>
       <h1>{s.name}</h1>
       <div className="store-tags">
-        <span>{openingLabels[s.openingStatus] || "營業狀態待確認"}</span>
+        <OpeningBadge status={s.openingStatus} />
         {[...new Set(s.equipment.map((e) => e.type))].map((type) => (
           <span key={type}>{type}</span>
         ))}
@@ -526,7 +593,7 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
         </p>
       )}
       <p>{s.address}</p>
-      <p>營業時間：{s.hours || "待總部確認"}</p>
+      <p>營業時間：{s.hours?.trim() ? s.hours : DEFAULT_STORE_HOURS}</p>
       <p>
         {s.phone ? (
           <a href={"tel:" + s.phone}>☎ {s.phone}</a>
@@ -543,9 +610,23 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
       <p className="notice">
         尚未串接設備，即時狀態暫不可用 · 不提供空機數或倒數預估
       </p>
+      {s.machineQueryUrl ? (
+        <LinkButton className="machine-query" url={s.machineQueryUrl}>
+          空機查詢
+        </LinkButton>
+      ) : null}
+      {catalogChips(s.equipment).length ? (
+        <div className="equip-chips">
+          {catalogChips(s.equipment).map((chip) => (
+            <span className="equip-chip" key={chip.key}>
+              {chip.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {error && <p role="alert">{error}</p>}
       {!s.equipment.length && <p>設備資料待總部補充。</p>}
-      {s.equipment.map((e) => (
+      {s.equipment.filter((e) => !isPlainCatalogCount(e)).map((e) => (
         <article className="equipment" key={e.id}>
           <div>
             <h3>
@@ -579,15 +660,20 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
         </article>
       ))}
       <h2>YouTube 操作教學</h2>
-      {s.tutorials.length ? (
-        s.tutorials.map((t, i) => (
-          <LinkButton key={i} url={t.url}>
-            {t.category} · {t.title}
-          </LinkButton>
-        ))
-      ) : (
-        <p>本店尚未配置操作教學影片。</p>
-      )}
+      <a
+        className="button youtube-channel"
+        href={OFFICIAL_YOUTUBE_CHANNEL_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <YouTubeMark />
+        YouTube 操作教學
+      </a>
+      {s.tutorials.map((t, i) => (
+        <LinkButton key={i} url={t.url}>
+          {t.category} · {t.title}
+        </LinkButton>
+      ))}
       <h2>一起經營好生活</h2>
       <LinkButton url={officialLineUrl(settings)}>
         詢問加盟
@@ -932,10 +1018,7 @@ function PublicApp() {
                           </h3>
                           <p>{s.address}</p>
                           <div className="store-tags">
-                            <span>
-                              {openingLabels[s.openingStatus] ||
-                                "營業狀態待確認"}
-                            </span>
+                            <OpeningBadge status={s.openingStatus} />
                             <span>即時資訊尚未串接</span>
                             {s.lat === null && <span>地圖位置待確認</span>}
                           </div>
@@ -1362,7 +1445,7 @@ function Admin() {
           <button
             key={s.id}
             onClick={() => {
-              setEditing(s);
+              setEditing(editorStore(s));
               setDemo(null);
             }}
           >
@@ -1384,7 +1467,7 @@ function Admin() {
                   },
                 );
                 const { persistence, ...store } = saved;
-                setEditing(store);
+                setEditing(editorStore(store));
                 await load();
                 if (persistence?.error) {
                   throw Error("門市已儲存，但雲端備份失敗：" + persistence.error);
@@ -1453,7 +1536,7 @@ function Admin() {
                         },
                       );
                       setGeoNote(result.message);
-                      if (result.store) setEditing(result.store);
+                      if (result.store) setEditing(editorStore(result.store));
                       await load();
                     })
                   }
@@ -1493,7 +1576,11 @@ function Admin() {
               開店狀態
               <select
                 aria-label="開店狀態"
-                value={editing.openingStatus || "unknown"}
+                value={
+                  editing.openingStatus && editing.openingStatus !== "unknown"
+                    ? editing.openingStatus
+                    : "open"
+                }
                 onChange={(e) => update("openingStatus", e.target.value)}
               >
                 {Object.entries(openingLabels).map(([k, v]) => (
@@ -1561,9 +1648,48 @@ function Admin() {
                 </div>
               ))}
             </div>
+            <h3>機型台數</h3>
+            <p>
+              填正整數才會出現在前台。0 或空白不保存、不顯示，也不代表即時空機。
+            </p>
+            <div className="machine-counts">
+              {MACHINE_CATALOG.flatMap((group) =>
+                group.capacities.map((kg) => {
+                  const saved = editing.equipment.find(
+                    (entry) => entry.id === countEquipmentId(group.type, kg),
+                  );
+                  return (
+                    <label key={countEquipmentId(group.type, kg)}>
+                      {group.type} {kg}KG
+                      <input
+                        aria-label={`${group.type} ${kg}KG 台數`}
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        max="1000"
+                        step="1"
+                        value={saved ? String(saved.quantity) : ""}
+                        onChange={(event) =>
+                          update(
+                            "equipment",
+                            withCatalogCount(
+                              editing.equipment,
+                              group.type,
+                              kg,
+                              event.target.value,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  );
+                }),
+              )}
+            </div>
             <h3>設備規格與費率</h3>
-            {editing.equipment.map((eq, i) => (
-              <section className="editor-card" key={i}>
+            {editing.equipment.map((eq, i) =>
+              isPlainCatalogCount(eq) ? null : (
+              <section className="editor-card" key={eq.id || i}>
                 <label>
                   種類
                   <select
@@ -1572,7 +1698,7 @@ function Admin() {
                       updateItem("equipment", i, "type", e.target.value)
                     }
                   >
-                    {["洗脫烘", "雙層烘", "加水站"].map((x) => (
+                    {EQUIPMENT_TYPES.map((x) => (
                       <option key={x}>{x}</option>
                     ))}
                   </select>
@@ -1642,7 +1768,8 @@ function Admin() {
                   刪除設備
                 </button>
               </section>
-            ))}
+              ),
+            )}
             <button
               type="button"
               onClick={() =>
@@ -1736,6 +1863,32 @@ function Admin() {
               value={editing.providerReference}
               onChange={(v) => update("providerReference", v)}
             />
+            <label>
+              無 API 時
+              <select
+                aria-label="無 API 時的查詢方式"
+                value={editing.machineQueryMode || "off"}
+                onChange={(event) =>
+                  update("machineQueryMode", event.target.value)
+                }
+              >
+                <option value="off">不顯示查詢按鈕</option>
+                <option value="button">按鈕查詢</option>
+              </select>
+            </label>
+            {(editing.machineQueryMode || "off") === "button" && (
+              <Field
+                label="機台查詢網址"
+                type="url"
+                value={editing.machineQueryUrl}
+                onChange={(value) => update("machineQueryUrl", value)}
+              />
+            )}
+            <p>
+              按鈕查詢只會另開你貼上的頁面，前台名稱固定為「空機查詢」。這不是即時
+              API，也不會取得空機數。未選擇或網址空白時，前台不顯示。接上原廠 API
+              後不再顯示這個按鈕。
+            </p>
             <div className="actions">
               <button type="submit">儲存門市</button>
               <button type="button" onClick={() => setEditing(null)}>

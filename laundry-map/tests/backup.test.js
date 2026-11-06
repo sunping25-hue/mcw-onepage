@@ -26,6 +26,17 @@ test("online backup restores the SQLite snapshot and referenced photos, purges s
     const row = db.prepare("SELECT id,document FROM stores LIMIT 1").get();
     const doc = JSON.parse(row.document);
     doc.photos = ["/uploads/12345678-1234-1234-1234-123456789abc.webp"];
+    doc.announcement = "總部公告保留";
+    doc.equipment = [
+      {
+        id: "count:洗脫烘:16",
+        type: "洗脫烘",
+        capacity: "16KG",
+        quantity: 5,
+        model: "",
+        price: "",
+      },
+    ];
     mkdirSync(join(data, "uploads"));
     const photo = await sharp({
       create: { width: 10, height: 10, channels: 3, background: "blue" },
@@ -73,6 +84,14 @@ test("online backup restores the SQLite snapshot and referenced photos, purges s
       ).address,
       doc.address,
     );
+    const restoredDoc = JSON.parse(
+      restored.prepare("SELECT document FROM stores WHERE id=?").get(row.id)
+        .document,
+    );
+    assert.equal(restoredDoc.announcement, "總部公告保留");
+    assert.equal(restoredDoc.equipment[0].quantity, 5);
+    assert.equal(restoredDoc.equipment[0].capacity, "16KG");
+    assert.equal(restoredDoc.name, doc.name);
     restored.close();
     await assert.rejects(createBackup(data, destination), /已存在/);
     await assert.rejects(

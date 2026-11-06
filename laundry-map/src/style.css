@@ -515,6 +515,67 @@ footer a {
   padding: 12px;
   border-radius: 9px;
 }
+.equip-chips,
+.machine-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.machine-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+}
+.machine-counts label,
+.machine-counts input {
+  min-width: 0;
+  max-width: 100%;
+}
+.machine-counts input {
+  width: 100%;
+}
+.equip-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 999px;
+  background: #123e60;
+  color: #eef8ff;
+  border: 1px solid #3d7396;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.detail a.youtube-channel,
+.detail a.youtube-channel:hover {
+  background: #cc0000;
+  border-color: #cc0000;
+  color: #fff;
+  font-weight: 700;
+}
+.detail a.machine-query {
+  background: #c24e00;
+  border-color: #c24e00;
+  color: #fff;
+  font-weight: 700;
+}
+.detail a.machine-query:hover,
+.detail a.machine-query:focus-visible {
+  background: #9a3b00;
+  border-color: #9a3b00;
+  color: #fff;
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+.youtube-mark {
+  width: 22px;
+  height: 16px;
+  display: inline-flex;
+}
+.youtube-mark svg {
+  width: 22px;
+  height: 16px;
+  display: block;
+}
 .detail h2 {
   margin-top: 32px;
 }
@@ -866,6 +927,13 @@ header {
   font-size: 0.72rem;
   color: #bdeaff;
   padding: 4px 10px;
+}
+.store-tags span.opening-badge,
+.store-card .store-tags span.opening-badge {
+  border: 0;
+  background: #0b6a30;
+  color: #fff;
+  font-weight: 700;
 }
 .store-card .store-tags {
   margin: 9px 0 0;
