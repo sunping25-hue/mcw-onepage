@@ -22,8 +22,13 @@ for (const width of [375, 390, 1280]) {
     return r.abort();
   });
   await page.goto(process.env.TEST_BASE_URL || "http://127.0.0.1:3100");
-  await page.getByRole('link',{name:'官方 LINE ↗',exact:true}).waitFor();
-  assert.equal(await page.getByRole('link',{name:'官方 LINE ↗',exact:true}).getAttribute('href'),'https://lin.ee/s4v3cIG');
+  assert.equal(await page.title(), "MCW自助洗衣地圖");
+  const official = page.getByRole("link", { name: "加入官方 LINE", exact: true });
+  await official.waitFor();
+  assert.equal(await official.getAttribute("href"), "https://lin.ee/s4v3cIG");
+  assert.equal(await official.getAttribute("target"), "_blank");
+  assert.equal(await page.locator("nav.fab, .f-tel").count(), 0);
+  assert.equal(await page.locator('a[href^="tel:"]').count(), 0);
 
   await page
     .getByRole("button", { name: "魔彩自助洗衣・屏東新園店 →", exact: true })
@@ -117,15 +122,52 @@ for (const width of [375, 390, 1280]) {
   }
   await page.getByRole("button", { name: /操作教學$/ }).click();
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
+  for (const name of ["洗脫烘操作教學", "雙層烘操作教學", "付款操作教學", "會員儲值點數操作教學"]) {
+    await page.getByRole("heading", { name, exact: true }).waitFor();
+  }
+  assert.equal(
+    await page.locator(".tutorial-feature img").getAttribute("src"),
+    "/brand/mcw-wash-dry.webp",
+  );
+  const stayed = page.url();
+  await page.getByRole("heading", { name: "會員儲值點數操作教學", exact: true }).click();
+  assert.equal(page.url(), stayed);
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
   await page.screenshot({
     path: `artifacts/tutorials-${width}.png`,
     fullPage: false,
   });
   await page.getByRole("button", { name: /加盟諮詢$/ }).click();
   await page.getByRole("heading", { name: /一間洗衣店/ }).waitFor();
+  await page.getByText("加盟MCW就是你的最佳選擇!").waitFor();
+  await page.getByText("成功打入美國市場", { exact: false }).waitFor();
+  const ask = page.getByRole("link", { name: "詢問加盟 ↗", exact: true });
+  assert.equal(await ask.getAttribute("href"), "https://lin.ee/s4v3cIG");
+  assert.equal(await ask.getAttribute("target"), "_blank");
+  assert.equal(
+    await page.locator(".franchise-photo img").getAttribute("src"),
+    "/brand/community-lineup.webp",
+  );
+  assert.equal(
+    await page.locator(".franchise-equipment img").getAttribute("src"),
+    "/brand/mcw-22kg-blue.webp",
+  );
+  const franchiseUrl = page.url();
+  await ask.evaluate((el) =>
+    el.addEventListener("click", (event) => event.preventDefault(), { capture: true }),
+  );
+  await ask.click();
+  assert.equal(page.url(), franchiseUrl);
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
   await page.screenshot({
     path: `artifacts/franchise-${width}.png`,
-    fullPage: false,
+    fullPage: true,
   });
   await page.goto(
     (process.env.TEST_BASE_URL || "http://127.0.0.1:3100") + "/admin",

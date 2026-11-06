@@ -65,7 +65,7 @@ export const storeSchema = z
     tutorials: z
       .array(
         z.object({
-          category: z.enum(["洗脫烘", "雙層烘", "付款"]),
+          category: z.enum(["洗脫烘", "雙層烘", "付款", "會員儲值點數"]),
           title: z.string().min(1).max(100),
           url: youtube.refine(Boolean),
         }),
