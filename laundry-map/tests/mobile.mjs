@@ -210,6 +210,56 @@ for (const width of [375, 390, 1280]) {
   }
   await page.getByRole("button", { name: /操作教學$/ }).click();
   await page.getByRole("heading", { name: "認識你的洗衣好幫手", exact: true }).waitFor();
+  const mascot = page.locator(".mascot-video video");
+  await mascot.waitFor();
+  assert.equal(await mascot.evaluate((el) => el.autoplay), false);
+  assert.equal(await mascot.evaluate((el) => el.loop), false);
+  assert.equal(await mascot.evaluate((el) => el.muted), false);
+  assert.equal(await mascot.evaluate((el) => el.controls), true);
+  assert.equal(await mascot.evaluate((el) => el.paused), true);
+  assert.equal(
+    await mascot.locator("source").getAttribute("src"),
+    "/brand/mcw-mascot-3d.mp4",
+  );
+  assert.equal(
+    await mascot.locator("source").getAttribute("type"),
+    "video/mp4",
+  );
+  assert.equal(
+    await mascot.getAttribute("poster"),
+    "/brand/mcw-mascot-3d-poster.jpg",
+  );
+  await page.getByText("MCW 吉祥物動畫", { exact: true }).waitFor();
+  await page
+    .getByText(
+      "MCW 藍白貓咪吉祥物的十五秒立體動畫。按下播放才會開始，播放時才會有聲音。",
+      { exact: true },
+    )
+    .waitFor();
+  const mascotBox = await mascot.boundingBox();
+  assert.ok(mascotBox.width <= 300, "Mascot video stays a modest width");
+  assert.ok(mascotBox.width < width * 0.9, "Mascot video does not fill the viewport");
+  assert.ok(mascotBox.width >= 160, "Mascot video stays large enough to use");
+  assert.equal(
+    await page.evaluate(() => {
+      const video = document.querySelector(".mascot-video");
+      const feature = document.querySelector(".tutorial-feature");
+      return video.getBoundingClientRect().bottom <= feature.getBoundingClientRect().top + 1;
+    }),
+    true,
+  );
+  if (width === 390) {
+    const media = await fetch(new URL("/brand/mcw-mascot-3d.mp4", page.url()), {
+      headers: { Range: "bytes=0-15" },
+    });
+    assert.ok(media.status === 200 || media.status === 206);
+    assert.match(media.headers.get("content-type") || "", /mp4|video/);
+    const bytes = new Uint8Array(await media.arrayBuffer());
+    assert.equal(String.fromCharCode(...bytes.slice(4, 8)), "ftyp");
+    const poster = await fetch(new URL("/brand/mcw-mascot-3d-poster.jpg", page.url()));
+    assert.equal(poster.status, 200);
+    assert.match(poster.headers.get("content-type") || "", /image/);
+  }
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
   const featureImg = page.locator(".tutorial-feature > img");
   assert.equal(await featureImg.getAttribute("src"), "/brand/mcw-22kg-blue.webp");

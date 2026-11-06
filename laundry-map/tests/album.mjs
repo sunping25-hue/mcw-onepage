@@ -314,6 +314,36 @@ try {
   await page.getByRole("button", { name: "← 返回地圖" }).click();
   const card = page.locator(".store-card", { hasText: "相簿測試門市（非營運資料）" });
   assert.equal(await card.locator("img").first().getAttribute("src"), savedOrder[0]);
+  const phonePhoto = await card.locator("img").evaluate((el) => ({
+    width: el.clientWidth,
+    height: el.clientHeight,
+    card: el.parentElement.clientWidth,
+  }));
+  assert.equal(phonePhoto.width, phonePhoto.height);
+  assert.ok(
+    phonePhoto.width >= phonePhoto.card * 0.7,
+    "Phone store main photo fills most of the card width",
+  );
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const desktopPhoto = await card.locator("img").evaluate((el) => ({
+    width: el.clientWidth,
+    height: el.clientHeight,
+    card: el.parentElement.clientWidth,
+  }));
+  assert.equal(desktopPhoto.width, desktopPhoto.height);
+  assert.ok(
+    desktopPhoto.width >= desktopPhoto.card * 0.7,
+    "Desktop store main photo scales with the card",
+  );
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    true,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
   const blankCard = page.locator(".store-card", {
     hasText: "照片待補測試門市（非營運資料）",
   });

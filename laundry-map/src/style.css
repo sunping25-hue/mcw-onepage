@@ -3,7 +3,7 @@
   color: #edf6ff;
   background: #071529;
   font-synthesis: none;
-  font-size: 15px;
+  font-size: 16px;
   --cyan: #17cbff;
   --blue: #087cf4;
   --border: #244361;
@@ -188,7 +188,7 @@ main {
 }
 .eyebrow {
   color: var(--cyan);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.18em;
   font-weight: 700;
 }
@@ -331,22 +331,27 @@ main {
 }
 .store-card {
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: #0c233c;
   padding: 15px;
   margin-bottom: 12px;
-  align-items: start;
+  align-items: flex-start;
 }
 .store-card > img {
-  width: 80px;
-  height: 90px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  flex: 1 0 100%;
+  max-width: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .store-card > div {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 .store-card p {
   font-size: 0.85rem;
@@ -984,16 +989,12 @@ header {
   gap: 5px;
 }
 .store-card .store-tags span {
-  font-size: 0.65rem;
-  padding: 3px 7px;
+  font-size: 0.75rem;
+  padding: 4px 8px;
 }
 .store-card {
   background: linear-gradient(125deg, #102c47, #0b2035);
   border-color: #2c526e;
-}
-.store-card > img {
-  width: 88px;
-  height: 110px;
 }
 .store-card .text-button:hover {
   background: transparent;
@@ -1159,6 +1160,29 @@ header {
   border-radius: 20px;
   padding: 5px 8px;
   color: #9fcee4;
+}
+.mascot-video {
+  width: min(280px, 78%);
+  margin: 0 auto 28px;
+  text-align: center;
+}
+.mascot-video video {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  display: block;
+  border: 1px solid #2a5475;
+  border-radius: 16px;
+  background: #071529;
+}
+.mascot-video figcaption {
+  margin-bottom: 8px;
+  color: white;
+  font-weight: 700;
+}
+.mascot-video p {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
 }
 .tutorial-icon {
   background: linear-gradient(130deg, #087cf4, #174b79);
@@ -1414,10 +1438,10 @@ header {
     margin: 0 0 10px;
   }
   .map-page .store-list h2 {
-    font-size: 1.02rem;
+    font-size: 1.12rem;
   }
   .map-page .store-list .section-heading > span {
-    font-size: 0.64rem;
+    font-size: 0.75rem;
   }
   .map-page .store-list > p[role="status"] {
     font-size: 0.68rem;
@@ -1462,18 +1486,14 @@ header {
     padding: 12px;
   }
   .store-card {
-    padding: 11px;
-    gap: 9px;
-  }
-  .store-card > img {
-    width: 65px;
-    height: 90px;
+    padding: 12px;
+    gap: 12px;
   }
   .store-card h3 {
-    font-size: 0.93rem;
+    font-size: 1.05rem;
   }
   .store-card p {
-    font-size: 0.75rem;
+    font-size: 0.88rem;
   }
   .store-card > button {
     min-width: 36px;

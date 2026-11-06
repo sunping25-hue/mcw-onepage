@@ -1094,6 +1094,25 @@ function PublicApp() {
             )}
             {tab === "tutorials" && (
               <section className="content-panel tutorials-panel">
+                <figure className="mascot-video">
+                  <figcaption id="mascot-video-title">MCW 吉祥物動畫</figcaption>
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster="/brand/mcw-mascot-3d-poster.jpg"
+                    width="544"
+                    height="544"
+                    aria-labelledby="mascot-video-title"
+                    aria-describedby="mascot-video-desc"
+                  >
+                    <source src="/brand/mcw-mascot-3d.mp4" type="video/mp4" />
+                    您的瀏覽器無法播放這段 MP4 動畫。
+                  </video>
+                  <p id="mascot-video-desc">
+                    MCW 藍白貓咪吉祥物的十五秒立體動畫。按下播放才會開始，播放時才會有聲音。
+                  </p>
+                </figure>
                 <div className="tutorial-feature">
                   <img
                     src="/brand/mcw-22kg-blue.webp"
