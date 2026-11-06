@@ -1054,10 +1054,10 @@ function PublicApp() {
                 </div>
                 <figure className="franchise-equipment">
                   <img
-                    src="/brand/mcw-22kg-blue.webp"
-                    alt="MCW 22KG 洗脫烘一體機"
-                    width="923"
-                    height="1704"
+                    src="/brand/mcw-machine-lineup-guide.webp"
+                    alt="MCW 洗脫烘一體機完整機型介紹"
+                    width="1104"
+                    height="1560"
                   />
                 </figure>
                 <LinkButton url={officialLineUrl(settings)}>

@@ -1042,13 +1042,14 @@ header {
   min-height: 44px;
 }
 .franchise-equipment {
-  width: min(100%, 420px);
-  margin: 4px auto 22px;
+  width: 100%;
+  margin: 8px 0 18px;
 }
 .franchise-equipment img {
   width: 100%;
   height: auto;
   display: block;
+  object-fit: contain;
 }
 .franchise-more {
   display: flex;

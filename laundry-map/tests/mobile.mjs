@@ -188,9 +188,35 @@ for (const width of [375, 390, 1280]) {
     await page.locator(".franchise-photo img").getAttribute("src"),
     "/brand/community-lineup.webp",
   );
-  assert.equal(
-    await page.locator(".franchise-equipment img").getAttribute("src"),
-    "/brand/mcw-22kg-blue.webp",
+  const guide = page.locator(".franchise-equipment img");
+  assert.equal(await guide.getAttribute("src"), "/brand/mcw-machine-lineup-guide.webp");
+  assert.equal(await guide.getAttribute("alt"), "MCW 洗脫烘一體機完整機型介紹");
+  assert.equal(await guide.getAttribute("width"), "1104");
+  assert.equal(await guide.getAttribute("height"), "1560");
+  await guide.evaluate((img) => img.complete && img.naturalWidth > 0 ? img : new Promise((resolve, reject) => {
+    img.addEventListener("load", () => resolve(img), { once: true });
+    img.addEventListener("error", () => reject(Error("machine guide failed to load")), { once: true });
+  }));
+  const guideBox = await guide.evaluate((img) => {
+    const box = img.getBoundingClientRect();
+    const contacts = document.querySelector(".franchise-contacts").getBoundingClientRect();
+    return {
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      objectFit: getComputedStyle(img).objectFit,
+      ratio: box.width / box.height,
+      belowContacts: box.top >= contacts.bottom - 1,
+      inside: box.right <= document.documentElement.clientWidth + 1,
+    };
+  });
+  assert.equal(guideBox.naturalWidth, 1104);
+  assert.equal(guideBox.naturalHeight, 1560);
+  assert.equal(guideBox.objectFit, "contain");
+  assert.equal(guideBox.belowContacts, true);
+  assert.equal(guideBox.inside, true);
+  assert.ok(
+    Math.abs(guideBox.ratio - 1104 / 1560) < 0.03,
+    "Machine guide must show the full 1104×1560 poster",
   );
   const linkLayout = await page.evaluate(() => {
     const ask = [...document.querySelectorAll("a")].find(
