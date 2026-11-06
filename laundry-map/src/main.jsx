@@ -988,11 +988,18 @@ function Admin() {
     [editing, setEditing] = useState(null),
     [settings, setSettings] = useState({ lineUrl: "", franchiseUrl: "" }),
     [busy, setBusy] = useState(false),
-    [demo, setDemo] = useState(null);
+    [demo, setDemo] = useState(null),
+    [cloud, setCloud] = useState(null),
+    [geoNote, setGeoNote] = useState("");
   const load = () =>
-    Promise.all([api("/admin/stores"), api("/settings")]).then(([s, c]) => {
+    Promise.all([
+      api("/admin/stores"),
+      api("/settings"),
+      api("/admin/persistence"),
+    ]).then(([s, c, p]) => {
       setStores(s);
       setSettings(c);
+      setCloud(p);
     });
   useEffect(() => {
     api("/admin/session")
@@ -1109,6 +1116,68 @@ function Admin() {
           <button>儲存入口</button>
         </form>
       </fieldset>
+      <fieldset disabled={busy}>
+        <h2>雲端門市資料</h2>
+        <p>
+          {cloud?.configured
+            ? `雲端保存已連接（${cloud.driver}）。最近備份：${cloud.remoteSnapshot?.createdAt || cloud.last?.attemptedAt || "尚無"}。`
+            : "尚未接通雲端保存。正式環境使用既有 Google 雲端硬碟（PERSIST_DRIVER=gdrive）；檔案與 S3 只是可選驅動。金鑰尚未填入前，Render 免費方案的本機資料會在重新啟動後消失。"}
+        </p>
+        {!!cloud?.missing?.length && (
+          <p role="status">尚缺環境變數：{cloud.missing.join("、")}</p>
+        )}
+        {cloud?.last?.outcome === "error" && (
+          <p role="alert">最近一次雲端操作失敗：{cloud.last.detail}</p>
+        )}
+        <div className="stack-actions">
+          <button
+            type="button"
+            onClick={() =>
+              run(async () => {
+                if (
+                  cloud?.backupBlocked &&
+                  !confirm("雲端還原未成功。確定要用目前資料覆寫雲端備份？")
+                )
+                  return;
+                const result = await api("/admin/persistence/backup", {
+                  method: "POST",
+                  body: JSON.stringify(
+                    cloud?.backupBlocked ? { confirm: "OVERWRITE" } : {},
+                  ),
+                });
+                setCloud(result);
+                setMessage("雲端備份完成");
+              })
+            }
+          >
+            立即備份
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                !confirm(
+                  "從雲端還原會取代目前門市資料，並使總部重新登入。確定還原？",
+                )
+              )
+                return;
+              run(async () => {
+                const result = await api("/admin/persistence/restore", {
+                  method: "POST",
+                  body: JSON.stringify({ confirm: "RESTORE" }),
+                });
+                setCloud(result);
+                setEditing(null);
+                setDemo(null);
+                await load();
+                setMessage("已從雲端還原門市資料");
+              });
+            }}
+          >
+            從雲端還原
+          </button>
+        </div>
+      </fieldset>
       <div className="section-heading">
         <h2>分店管理 · {stores.length} 間</h2>
         <button
@@ -1139,15 +1208,19 @@ function Admin() {
             onSubmit={(e) => {
               e.preventDefault();
               run(async () => {
-                const s = await api(
+                const saved = await api(
                   "/admin/stores" + (editing.id ? "/" + editing.id : ""),
                   {
                     method: editing.id ? "PUT" : "POST",
                     body: JSON.stringify(editing),
                   },
                 );
-                setEditing(s);
+                const { persistence, ...store } = saved;
+                setEditing(store);
                 await load();
+                if (persistence?.error) {
+                  throw Error("門市已儲存，但雲端備份失敗：" + persistence.error);
+                }
                 setMessage("門市已儲存；公開且已確認的內容會反映於前台");
               });
             }}
@@ -1198,6 +1271,33 @@ function Admin() {
                 </p>
               </div>
             )}
+            {editing.id && (
+              <div className="stack-actions">
+                <button
+                  type="button"
+                  onClick={() =>
+                    run(async () => {
+                      const result = await api(
+                        "/admin/stores/" + editing.id + "/geocode",
+                        {
+                          method: "POST",
+                          body: JSON.stringify({ force: true }),
+                        },
+                      );
+                      setGeoNote(result.message);
+                      if (result.store) setEditing(result.store);
+                      await load();
+                    })
+                  }
+                >
+                  查詢地址座標
+                </button>
+              </div>
+            )}
+            {geoNote && <p role="status">{geoNote}</p>}
+            <p>
+              只有門牌、路名與行政區都相符，而且沒有標成其他店名時，才會放入地圖圖標。沒有核實座標時仍可用完整地址導航。
+            </p>
             <label>
               門市公告
               <textarea

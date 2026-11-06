@@ -1,0 +1,45 @@
+[
+  {
+    "place_id": 235886576,
+    "osm_type": "node",
+    "osm_id": 11082467648,
+    "lat": "22.6544477",
+    "lon": "120.3315108",
+    "category": "place",
+    "type": "house",
+    "addresstype": "place",
+    "name": "",
+    "display_name": "26號, 大豐一路, 本館里, 三民區, 高雄市, 807, 臺灣",
+    "address": {
+      "house_number": "26號",
+      "road": "大豐一路",
+      "neighbourhood": "本館里",
+      "suburb": "三民區",
+      "city": "高雄市",
+      "postcode": "807",
+      "country": "臺灣",
+      "country_code": "tw"
+    }
+  },
+  {
+    "place_id": 233442492,
+    "osm_type": "way",
+    "osm_id": 91235301,
+    "lat": "22.6570269",
+    "lon": "120.3310180",
+    "category": "highway",
+    "type": "residential",
+    "addresstype": "residential",
+    "name": "大豐一路",
+    "display_name": "大豐一路, 本館里, 三民區, 高雄市, 807, 臺灣",
+    "address": {
+      "road": "大豐一路",
+      "neighbourhood": "本館里",
+      "suburb": "三民區",
+      "city": "高雄市",
+      "postcode": "807",
+      "country": "臺灣",
+      "country_code": "tw"
+    }
+  }
+]

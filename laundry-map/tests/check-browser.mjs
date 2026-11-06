@@ -24,6 +24,8 @@ const server = spawn(process.execPath, ["server/index.js"], {
     PORT: String(port),
     DATA_DIR: dir,
     ADMIN_PASSWORD: "",
+    GEOCODE_ON_START: "false",
+    PERSIST_DRIVER: "none",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });

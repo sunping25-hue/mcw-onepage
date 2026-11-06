@@ -42,7 +42,7 @@ test("online backup restores the SQLite snapshot and referenced photos, purges s
       Date.now() + 100000,
     );
     const manifest = await createBackup(data, destination);
-    assert.equal(manifest.stores, 2);
+    assert.equal(manifest.stores, 15);
     assert.equal(manifest.photos, 1);
     assert.equal(db.prepare("SELECT count(*) AS n FROM sessions").get().n, 1);
     assert.deepEqual(
@@ -60,7 +60,7 @@ test("online backup restores the SQLite snapshot and referenced photos, purges s
     const restored = new DatabaseSync(join(destination, "mcw.sqlite"));
     assert.equal(
       restored.prepare("SELECT count(*) AS n FROM stores").get().n,
-      2,
+      15,
     );
     assert.equal(
       restored.prepare("SELECT count(*) AS n FROM sessions").get().n,
@@ -90,7 +90,7 @@ test("online backup restores the SQLite snapshot and referenced photos, purges s
     const failed = join(root, "failed");
     await assert.rejects(createBackup(data, failed));
     assert.equal(existsSync(failed), false);
-    assert.equal(db.prepare("SELECT count(*) AS n FROM stores").get().n, 1);
+    assert.equal(db.prepare("SELECT count(*) AS n FROM stores").get().n, 14);
   } finally {
     db.close();
     rmSync(root, { recursive: true, force: true });

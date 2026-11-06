@@ -1,0 +1,26 @@
+[
+  {
+    "place_id": 238707011,
+    "osm_type": "node",
+    "osm_id": 4588609033,
+    "lat": "22.5402633",
+    "lon": "120.4602086",
+    "category": "shop",
+    "type": "supermarket",
+    "addresstype": "shop",
+    "name": "全聯福利中心",
+    "display_name": "全聯福利中心, 32, 仙吉路, 仙公廟, 仙吉村, 新園鄉, 屏東縣, 932, 臺灣",
+    "address": {
+      "shop": "全聯福利中心",
+      "house_number": "32",
+      "road": "仙吉路",
+      "hamlet": "仙公廟",
+      "city_district": "仙吉村",
+      "town": "新園鄉",
+      "county": "屏東縣",
+      "postcode": "932",
+      "country": "臺灣",
+      "country_code": "tw"
+    }
+  }
+]

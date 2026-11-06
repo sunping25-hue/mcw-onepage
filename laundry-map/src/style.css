@@ -460,6 +460,13 @@ footer a {
 }
 .admin {
   padding-top: 26px;
+  overflow-wrap: anywhere;
+}
+.stack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
 }
 .admin fieldset {
   border: 1px solid var(--border);

@@ -1,9 +1,13 @@
+# Free web service only. Do not add a disk and do not change plan to starter.
+# The live service is already on Render Free without a disk. This file is not applied automatically.
+# Cloud persistence is optional Google Drive (PERSIST_DRIVER=gdrive) set in the dashboard.
+# Do not put OAuth tokens or service-account keys in this file. No paid disk.
 services:
   - type: web
     name: mcw-laundry-map
     runtime: node
     rootDir: laundry-map
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /api/stores
@@ -13,12 +17,10 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATA_DIR
-        value: /var/data/mcw
+        value: /tmp/mcw-data
+      - key: GEOCODE_ON_START
+        value: "true"
       - key: ADMIN_USER
         value: hq
       - key: ADMIN_PASSWORD
         sync: false
-    disk:
-      name: mcw-data
-      mountPath: /var/data
-      sizeGB: 1
