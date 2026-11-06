@@ -78,7 +78,7 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 
 ## 手機驗證截圖
 
-[附近地圖](docs/screenshots/nearby-390.png) · [屏東新園店](docs/screenshots/xinyuan-390.png) · [高雄大豐店](docs/screenshots/dafeng-390.png) · [全台總覽](docs/screenshots/taiwan-390.png) · [門市詳情（隔離 DEMO 測試資料）](docs/screenshots/detail-demo-390.png) · [YouTube 教學空狀態](docs/screenshots/tutorials-390.png) · [加盟入口空狀態](docs/screenshots/franchise-390.png) · [總部雲端備份 390](docs/screenshots/admin-backup-390.png) · [總部雲端備份 375](docs/screenshots/admin-backup-375.png)。手機預覽固定為 375×812 或 390×844 的單一視窗，另保留詳情長頁檢查圖；不是將整頁長圖縮成手機大小。此為 390px 實際 UI；街道圖磚在測試中被阻擋，底圖為隨程式提供的 Natural Earth 真實臺灣輪廓；門市列表地址為使用者提供資料，精確座標仍待確認。
+[附近地圖](docs/screenshots/nearby-390.png) · [屏東新園店](docs/screenshots/xinyuan-390.png) · [高雄大豐店](docs/screenshots/dafeng-390.png) · [全台總覽](docs/screenshots/taiwan-390.png) · [門市詳情（隔離 DEMO 測試資料）](docs/screenshots/detail-demo-390.png) · [YouTube 教學空狀態](docs/screenshots/tutorials-390.png) · [加盟入口空狀態](docs/screenshots/franchise-390.png) · [總部雲端備份 390](docs/screenshots/admin-backup-390.png) · [總部雲端備份 375](docs/screenshots/admin-backup-375.png)。手機預覽固定為 375×812 或 390×844 的單一視窗，另保留詳情長頁檢查圖；不是將整頁長圖縮成手機大小。此為 390px 實際 UI；街道圖磚在測試中被阻擋，底圖為隨程式提供的 Natural Earth 真實臺灣輪廓。這組驗收圖沒有執行地址查詢，所以兩家店都還沒有圖標；部署後只有通過門牌核對的店才會出現圖標。
 
 ## 內建臺灣輪廓
 
