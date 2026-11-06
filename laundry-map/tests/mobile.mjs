@@ -212,11 +212,26 @@ for (const width of [375, 390, 1280]) {
   await page.getByRole("heading", { name: "認識你的洗衣好幫手", exact: true }).waitFor();
   const mascot = page.locator(".mascot-video video");
   await mascot.waitFor();
-  assert.equal(await mascot.evaluate((el) => el.autoplay), false);
-  assert.equal(await mascot.evaluate((el) => el.loop), false);
-  assert.equal(await mascot.evaluate((el) => el.muted), false);
-  assert.equal(await mascot.evaluate((el) => el.controls), true);
-  assert.equal(await mascot.evaluate((el) => el.paused), true);
+  assert.equal(
+    await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches),
+    false,
+  );
+  assert.equal(await mascot.evaluate((el) => el.autoplay), true);
+  assert.equal(await mascot.evaluate((el) => el.loop), true);
+  assert.equal(await mascot.evaluate((el) => el.muted), true);
+  assert.equal(await mascot.evaluate((el) => el.volume), 0);
+  assert.equal(await mascot.evaluate((el) => el.controls), false);
+  assert.equal(await mascot.evaluate((el) => el.hasAttribute("controls")), false);
+  assert.equal(await mascot.evaluate((el) => el.playsInline), true);
+  assert.equal(await page.locator(".mascot-video button, .mascot-video [aria-label*='暫停']").count(), 0);
+  await page.waitForFunction(() => {
+    const el = document.querySelector(".mascot-video video");
+    return !!el && !el.paused && el.currentTime > 0.15 && el.muted && el.volume === 0;
+  });
+  const startedAt = await mascot.evaluate((el) => el.currentTime);
+  await page.waitForTimeout(350);
+  const laterAt = await mascot.evaluate((el) => el.currentTime);
+  assert.ok(laterAt > startedAt, "Muted mascot video keeps playing");
   assert.equal(
     await mascot.locator("source").getAttribute("src"),
     "/brand/mcw-mascot-3d.mp4",
@@ -231,15 +246,43 @@ for (const width of [375, 390, 1280]) {
   );
   await page.getByText("MCW 吉祥物動畫", { exact: true }).waitFor();
   await page
-    .getByText(
-      "MCW 藍白貓咪吉祥物的十五秒立體動畫。按下播放才會開始，播放時才會有聲音。",
-      { exact: true },
-    )
+    .getByText("MCW 藍白貓咪吉祥物的十五秒立體動畫，自動靜音循環播放。", {
+      exact: true,
+    })
     .waitFor();
+  assert.equal(await page.getByText("按下播放", { exact: false }).count(), 0);
+  assert.equal(await page.getByText("才會有聲音", { exact: false }).count(), 0);
   const mascotBox = await mascot.boundingBox();
   assert.ok(mascotBox.width <= 300, "Mascot video stays a modest width");
   assert.ok(mascotBox.width < width * 0.9, "Mascot video does not fill the viewport");
   assert.ok(mascotBox.width >= 160, "Mascot video stays large enough to use");
+  const blend = await page.evaluate(() => {
+    const stage = document.querySelector(".mascot-video-stage");
+    const video = stage.querySelector("video");
+    const stageBox = stage.getBoundingClientRect();
+    const videoBox = video.getBoundingClientRect();
+    const stageStyle = getComputedStyle(stage);
+    const videoStyle = getComputedStyle(video);
+    return {
+      stageWider: stageBox.width > videoBox.width + 8,
+      stageTaller: stageBox.height > videoBox.height + 8,
+      mask: stageStyle.maskImage || stageStyle.webkitMaskImage || "",
+      background: stageStyle.backgroundColor,
+      border: videoStyle.borderTopWidth,
+      radius: videoStyle.borderTopLeftRadius,
+      shadow: videoStyle.boxShadow,
+    };
+  });
+  assert.equal(blend.stageWider, true);
+  assert.equal(blend.stageTaller, true);
+  assert.match(blend.mask, /gradient/i);
+  assert.equal(blend.background, "rgb(7, 21, 41)");
+  assert.equal(blend.border, "0px");
+  assert.equal(blend.radius, "0px");
+  assert.equal(blend.shadow, "none");
+  await page.locator(".mascot-video").screenshot({
+    path: `artifacts/mascot-video-${width}.png`,
+  });
   assert.equal(
     await page.evaluate(() => {
       const video = document.querySelector(".mascot-video");
@@ -259,6 +302,33 @@ for (const width of [375, 390, 1280]) {
     const poster = await fetch(new URL("/brand/mcw-mascot-3d-poster.jpg", page.url()));
     assert.equal(poster.status, 200);
     assert.match(poster.headers.get("content-type") || "", /image/);
+    const reduced = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+    });
+    try {
+      const reducedPage = await reduced.newPage();
+      await reducedPage.goto(baseUrl + "/?tab=tutorials");
+      const reducedVideo = reducedPage.locator(".mascot-video video");
+      await reducedVideo.waitFor();
+      await reducedPage.waitForTimeout(500);
+      const reducedState = await reducedVideo.evaluate((el) => ({
+        paused: el.paused,
+        autoplay: el.autoplay,
+        muted: el.muted,
+        volume: el.volume,
+        controls: el.controls,
+        currentTime: el.currentTime,
+      }));
+      assert.equal(reducedState.paused, true);
+      assert.equal(reducedState.autoplay, false);
+      assert.equal(reducedState.muted, true);
+      assert.equal(reducedState.volume, 0);
+      assert.equal(reducedState.controls, false);
+      assert.ok(reducedState.currentTime < 0.2);
+    } finally {
+      await reduced.close();
+    }
   }
   await page.getByRole("heading", { name: "你的洗衣小幫手" }).waitFor();
   const featureImg = page.locator(".tutorial-feature > img");
@@ -496,6 +566,11 @@ for (const width of [375, 390, 1280]) {
         await machines.click();
         const machinePopup = await machinePopupPromise;
         await machinePopup.waitForLoadState("domcontentloaded");
+        await machinePopup.waitForURL(
+          (url) =>
+            url.href.startsWith(MACHINE_URL) ||
+            url.href.includes("waitershop.betcoin.tw/Home/Index"),
+        );
         assert.equal(page.url(), detailUrl);
         const landed = machinePopup.url();
         assert.ok(
@@ -510,6 +585,7 @@ for (const width of [375, 390, 1280]) {
         await channel.click();
         const channelPopup = await channelPopupPromise;
         await channelPopup.waitForLoadState("domcontentloaded");
+        await channelPopup.waitForURL((url) => url.href.includes("youtube.com"));
         assert.equal(page.url(), detailUrl);
         assert.ok(channelPopup.url().includes("youtube.com"), channelPopup.url());
         await channelPopup.close();

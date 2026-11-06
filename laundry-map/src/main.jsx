@@ -737,6 +737,73 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
     </section>
   );
 }
+function MascotVideo() {
+  const ref = useRef(null);
+  const [reducedMotion, setReducedMotion] = useState(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReducedMotion(motion.matches);
+    motion.addEventListener("change", onChange);
+    return () => motion.removeEventListener("change", onChange);
+  }, []);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return undefined;
+    const lockMute = () => {
+      if (video.muted && video.volume === 0) return;
+      video.muted = true;
+      video.volume = 0;
+    };
+    lockMute();
+    video.addEventListener("volumechange", lockMute);
+    if (reducedMotion) {
+      video.autoplay = false;
+      video.pause();
+    } else {
+      video.autoplay = true;
+      if (video.paused) {
+        const pending = video.play();
+        if (pending && typeof pending.catch === "function") pending.catch(() => {});
+      }
+    }
+    return () => video.removeEventListener("volumechange", lockMute);
+  }, [reducedMotion]);
+  return (
+    <figure className="mascot-video">
+      <figcaption id="mascot-video-title">MCW 吉祥物動畫</figcaption>
+      <div className="mascot-video-stage">
+        <video
+          ref={(node) => {
+            ref.current = node;
+            if (!node) return;
+            node.muted = true;
+            node.defaultMuted = true;
+            node.volume = 0;
+          }}
+          autoPlay={!reducedMotion}
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          poster="/brand/mcw-mascot-3d-poster.jpg"
+          width="544"
+          height="544"
+          aria-labelledby="mascot-video-title"
+          aria-describedby="mascot-video-desc"
+        >
+          <source src="/brand/mcw-mascot-3d.mp4" type="video/mp4" />
+          您的瀏覽器無法播放這段 MP4 動畫。
+        </video>
+      </div>
+      <p id="mascot-video-desc">
+        MCW 藍白貓咪吉祥物的十五秒立體動畫，自動靜音循環播放。
+      </p>
+    </figure>
+  );
+}
 function PublicApp() {
   const [{ tab, store: selected }, navigate, backToMap] = useRoute();
   const openStore = (id) => navigate({ tab, store: id });
@@ -1094,25 +1161,7 @@ function PublicApp() {
             )}
             {tab === "tutorials" && (
               <section className="content-panel tutorials-panel">
-                <figure className="mascot-video">
-                  <figcaption id="mascot-video-title">MCW 吉祥物動畫</figcaption>
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster="/brand/mcw-mascot-3d-poster.jpg"
-                    width="544"
-                    height="544"
-                    aria-labelledby="mascot-video-title"
-                    aria-describedby="mascot-video-desc"
-                  >
-                    <source src="/brand/mcw-mascot-3d.mp4" type="video/mp4" />
-                    您的瀏覽器無法播放這段 MP4 動畫。
-                  </video>
-                  <p id="mascot-video-desc">
-                    MCW 藍白貓咪吉祥物的十五秒立體動畫。按下播放才會開始，播放時才會有聲音。
-                  </p>
-                </figure>
+                <MascotVideo />
                 <div className="tutorial-feature">
                   <img
                     src="/brand/mcw-22kg-blue.webp"

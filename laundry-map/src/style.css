@@ -1162,18 +1162,49 @@ header {
   color: #9fcee4;
 }
 .mascot-video {
-  width: min(280px, 78%);
-  margin: 0 auto 28px;
+  width: min(412px, 100%);
+  margin: 0 auto 18px;
   text-align: center;
+}
+.mascot-video-stage {
+  padding: 16%;
+  background: #071529;
+  line-height: 0;
+  -webkit-mask-image: radial-gradient(
+    ellipse 50% 50% at 50% 50%,
+    #000 68%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 50% 50% at 50% 50%,
+    #000 68%,
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 .mascot-video video {
   width: 100%;
   height: auto;
   aspect-ratio: 1 / 1;
   display: block;
-  border: 1px solid #2a5475;
-  border-radius: 16px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
   background: #071529;
+  pointer-events: none;
+}
+.mascot-video video::-webkit-media-controls,
+.mascot-video video::-webkit-media-controls-enclosure,
+.mascot-video video::-webkit-media-controls-panel,
+.mascot-video video::-webkit-media-controls-play-button,
+.mascot-video video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
 }
 .mascot-video figcaption {
   margin-bottom: 8px;
