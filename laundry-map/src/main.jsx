@@ -739,42 +739,62 @@ function StoreDetail({ store: s, settings, onBack, saved, toggle }) {
 }
 function MascotVideo() {
   const ref = useRef(null);
-  const [reducedMotion, setReducedMotion] = useState(() =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = () => setReducedMotion(motion.matches);
-    motion.addEventListener("change", onChange);
-    return () => motion.removeEventListener("change", onChange);
-  }, []);
   useEffect(() => {
     const video = ref.current;
     if (!video) return undefined;
-    const lockMute = () => {
-      if (video.muted && video.volume === 0) return;
-      video.muted = true;
-      video.volume = 0;
-    };
-    lockMute();
-    video.addEventListener("volumechange", lockMute);
-    if (reducedMotion) {
-      video.autoplay = false;
-      video.pause();
-    } else {
-      video.autoplay = true;
-      if (video.paused) {
+    const kick = () => {
+      if (!video.muted || video.volume !== 0) {
+        video.muted = true;
+        video.defaultMuted = true;
+        video.volume = 0;
+      }
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      if (video.paused && !document.hidden) {
         const pending = video.play();
         if (pending && typeof pending.catch === "function") pending.catch(() => {});
       }
+    };
+    kick();
+    const onPause = () => {
+      if (!document.hidden) setTimeout(kick, 300);
+    };
+    video.addEventListener("pause", onPause);
+    video.addEventListener("volumechange", kick);
+    const onVisible = () => {
+      if (!document.hidden) kick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const once = () => kick();
+    for (const event of ["touchstart", "pointerdown", "scroll"]) {
+      window.addEventListener(event, once, { passive: true, once: true });
     }
-    return () => video.removeEventListener("volumechange", lockMute);
-  }, [reducedMotion]);
+    let observer;
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) kick();
+        },
+        { threshold: 0.1 },
+      );
+      observer.observe(video);
+    }
+    return () => {
+      video.removeEventListener("pause", onPause);
+      video.removeEventListener("volumechange", kick);
+      document.removeEventListener("visibilitychange", onVisible);
+      for (const event of ["touchstart", "pointerdown", "scroll"]) {
+        window.removeEventListener(event, once);
+      }
+      observer?.disconnect();
+    };
+  }, []);
   return (
     <figure className="mascot-video">
       <figcaption id="mascot-video-title">MCW 吉祥物動畫</figcaption>
-      <div className="mascot-video-stage">
+      <span className="mascot-video-mask">
         <video
+          className="mascot-video-player"
           ref={(node) => {
             ref.current = node;
             if (!node) return;
@@ -782,22 +802,25 @@ function MascotVideo() {
             node.defaultMuted = true;
             node.volume = 0;
           }}
-          autoPlay={!reducedMotion}
+          autoPlay
           muted
           loop
           playsInline
           preload="auto"
           disablePictureInPicture
+          disableRemotePlayback
           poster="/brand/mcw-mascot-3d-poster.jpg"
           width="544"
           height="544"
+          tabIndex={-1}
           aria-labelledby="mascot-video-title"
           aria-describedby="mascot-video-desc"
         >
+          <source src="/brand/mcw-mascot-3d.webm" type='video/webm; codecs="vp9"' />
           <source src="/brand/mcw-mascot-3d.mp4" type="video/mp4" />
-          您的瀏覽器無法播放這段 MP4 動畫。
+          您的瀏覽器無法播放這段動畫。
         </video>
-      </div>
+      </span>
       <p id="mascot-video-desc">
         MCW 藍白貓咪吉祥物的十五秒立體動畫，自動靜音循環播放。
       </p>

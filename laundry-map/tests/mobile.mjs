@@ -224,6 +224,8 @@ for (const width of [375, 390, 1280]) {
   assert.equal(await mascot.evaluate((el) => el.hasAttribute("controls")), false);
   assert.equal(await mascot.evaluate((el) => el.playsInline), true);
   assert.equal(await page.locator(".mascot-video button, .mascot-video [aria-label*='暫停']").count(), 0);
+  assert.equal(await mascot.evaluate((el) => el.tabIndex), -1);
+  assert.equal(await mascot.evaluate((el) => el.disablePictureInPicture), true);
   await page.waitForFunction(() => {
     const el = document.querySelector(".mascot-video video");
     return !!el && !el.paused && el.currentTime > 0.15 && el.muted && el.volume === 0;
@@ -232,14 +234,27 @@ for (const width of [375, 390, 1280]) {
   await page.waitForTimeout(350);
   const laterAt = await mascot.evaluate((el) => el.currentTime);
   assert.ok(laterAt > startedAt, "Muted mascot video keeps playing");
-  assert.equal(
-    await mascot.locator("source").getAttribute("src"),
-    "/brand/mcw-mascot-3d.mp4",
+  const sources = await mascot.locator("source").evaluateAll((els) =>
+    els.map((el) => ({ src: el.getAttribute("src"), type: el.getAttribute("type") })),
   );
-  assert.equal(
-    await mascot.locator("source").getAttribute("type"),
-    "video/mp4",
+  assert.deepEqual(sources, [
+    { src: "/brand/mcw-mascot-3d.webm", type: 'video/webm; codecs="vp9"' },
+    { src: "/brand/mcw-mascot-3d.mp4", type: "video/mp4" },
+  ]);
+  const playback = await mascot.evaluate((el) => ({
+    current: el.currentSrc,
+    canH264: el.canPlayType('video/mp4; codecs="avc1.42E01E"'),
+    canVp9: el.canPlayType('video/webm; codecs="vp9"'),
+  }));
+  assert.ok(
+    playback.current.includes("/brand/mcw-mascot-3d.webm") ||
+      playback.current.includes("/brand/mcw-mascot-3d.mp4"),
+    playback.current,
   );
+  if (!playback.canH264) {
+    assert.ok(playback.current.includes(".webm"), playback.current);
+    assert.ok(playback.canVp9, "Headless Chromium must be able to decode the VP9 copy");
+  }
   assert.equal(
     await mascot.getAttribute("poster"),
     "/brand/mcw-mascot-3d-poster.jpg",
@@ -257,29 +272,27 @@ for (const width of [375, 390, 1280]) {
   assert.ok(mascotBox.width < width * 0.9, "Mascot video does not fill the viewport");
   assert.ok(mascotBox.width >= 160, "Mascot video stays large enough to use");
   const blend = await page.evaluate(() => {
-    const stage = document.querySelector(".mascot-video-stage");
-    const video = stage.querySelector("video");
-    const stageBox = stage.getBoundingClientRect();
-    const videoBox = video.getBoundingClientRect();
-    const stageStyle = getComputedStyle(stage);
+    const mask = document.querySelector(".mascot-video-mask");
+    const video = mask.querySelector("video");
+    const maskStyle = getComputedStyle(mask);
     const videoStyle = getComputedStyle(video);
     return {
-      stageWider: stageBox.width > videoBox.width + 8,
-      stageTaller: stageBox.height > videoBox.height + 8,
-      mask: stageStyle.maskImage || stageStyle.webkitMaskImage || "",
-      background: stageStyle.backgroundColor,
+      mask: maskStyle.maskImage || maskStyle.webkitMaskImage || "",
+      composite: maskStyle.maskComposite || maskStyle.webkitMaskComposite || "",
+      videoBackground: videoStyle.backgroundColor,
       border: videoStyle.borderTopWidth,
       radius: videoStyle.borderTopLeftRadius,
       shadow: videoStyle.boxShadow,
+      pointer: maskStyle.pointerEvents,
     };
   });
-  assert.equal(blend.stageWider, true);
-  assert.equal(blend.stageTaller, true);
-  assert.match(blend.mask, /gradient/i);
-  assert.equal(blend.background, "rgb(7, 21, 41)");
+  assert.match(blend.mask, /linear-gradient/i);
+  assert.match(blend.mask, /8%/);
+  assert.equal(blend.videoBackground, "rgba(0, 0, 0, 0)");
   assert.equal(blend.border, "0px");
   assert.equal(blend.radius, "0px");
   assert.equal(blend.shadow, "none");
+  assert.equal(blend.pointer, "none");
   await page.locator(".mascot-video").screenshot({
     path: `artifacts/mascot-video-${width}.png`,
   });
@@ -302,6 +315,13 @@ for (const width of [375, 390, 1280]) {
     const poster = await fetch(new URL("/brand/mcw-mascot-3d-poster.jpg", page.url()));
     assert.equal(poster.status, 200);
     assert.match(poster.headers.get("content-type") || "", /image/);
+    const webm = await fetch(new URL("/brand/mcw-mascot-3d.webm", page.url()), {
+      headers: { Range: "bytes=0-3" },
+    });
+    assert.ok(webm.status === 200 || webm.status === 206);
+    assert.match(webm.headers.get("content-type") || "", /webm|video/);
+    const webmBytes = new Uint8Array(await webm.arrayBuffer());
+    assert.deepEqual([...webmBytes.slice(0, 4)], [0x1a, 0x45, 0xdf, 0xa3]);
     const reduced = await browser.newContext({
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
@@ -311,21 +331,22 @@ for (const width of [375, 390, 1280]) {
       await reducedPage.goto(baseUrl + "/?tab=tutorials");
       const reducedVideo = reducedPage.locator(".mascot-video video");
       await reducedVideo.waitFor();
-      await reducedPage.waitForTimeout(500);
+      await reducedPage.waitForFunction(() => {
+        const el = document.querySelector(".mascot-video video");
+        return !!el && !el.paused && el.currentTime > 0.15 && el.muted && el.volume === 0;
+      });
       const reducedState = await reducedVideo.evaluate((el) => ({
         paused: el.paused,
         autoplay: el.autoplay,
         muted: el.muted,
         volume: el.volume,
         controls: el.controls,
-        currentTime: el.currentTime,
       }));
-      assert.equal(reducedState.paused, true);
-      assert.equal(reducedState.autoplay, false);
+      assert.equal(reducedState.paused, false);
+      assert.equal(reducedState.autoplay, true);
       assert.equal(reducedState.muted, true);
       assert.equal(reducedState.volume, 0);
       assert.equal(reducedState.controls, false);
-      assert.ok(reducedState.currentTime < 0.2);
     } finally {
       await reduced.close();
     }
