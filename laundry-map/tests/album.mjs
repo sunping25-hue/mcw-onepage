@@ -317,9 +317,13 @@ try {
   const phonePhoto = await card.locator("img").evaluate((el) => ({
     width: el.clientWidth,
     height: el.clientHeight,
+    card: el.parentElement.clientWidth,
   }));
   assert.equal(phonePhoto.width, phonePhoto.height);
-  assert.ok(phonePhoto.width >= 90, "Phone store main photo stays a large square");
+  assert.ok(
+    phonePhoto.width >= phonePhoto.card * 0.7,
+    "Phone store main photo fills most of the card width",
+  );
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
     true,
@@ -328,9 +332,13 @@ try {
   const desktopPhoto = await card.locator("img").evaluate((el) => ({
     width: el.clientWidth,
     height: el.clientHeight,
+    card: el.parentElement.clientWidth,
   }));
   assert.equal(desktopPhoto.width, desktopPhoto.height);
-  assert.ok(desktopPhoto.width >= 110, "Desktop store main photo stays a large square");
+  assert.ok(
+    desktopPhoto.width >= desktopPhoto.card * 0.7,
+    "Desktop store main photo scales with the card",
+  );
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
     true,

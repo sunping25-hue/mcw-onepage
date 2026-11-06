@@ -331,24 +331,27 @@ main {
 }
 .store-card {
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: #0c233c;
   padding: 15px;
   margin-bottom: 12px;
-  align-items: center;
+  align-items: flex-start;
 }
 .store-card > img {
-  width: 120px;
-  height: 120px;
+  width: 100%;
+  height: auto;
   aspect-ratio: 1 / 1;
-  flex: none;
+  flex: 1 0 100%;
+  max-width: 100%;
   object-fit: cover;
   border-radius: 12px;
 }
 .store-card > div {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 .store-card p {
   font-size: 0.85rem;
@@ -993,10 +996,6 @@ header {
   background: linear-gradient(125deg, #102c47, #0b2035);
   border-color: #2c526e;
 }
-.store-card > img {
-  width: 120px;
-  height: 120px;
-}
 .store-card .text-button:hover {
   background: transparent;
   color: #17cbff;
@@ -1466,10 +1465,6 @@ header {
   .store-card {
     padding: 12px;
     gap: 12px;
-  }
-  .store-card > img {
-    width: 96px;
-    height: 96px;
   }
   .store-card h3 {
     font-size: 1.05rem;
