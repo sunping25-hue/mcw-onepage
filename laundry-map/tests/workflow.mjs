@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 const dir = mkdtempSync(join(tmpdir(), "mcw-browser-"));
+const persistDir = mkdtempSync(join(tmpdir(), "mcw-persist-"));
 const password = randomBytes(24).toString("hex");
 const port = 3199,
   base = `http://127.0.0.1:${port}`;
@@ -16,6 +17,9 @@ const child = spawn(process.execPath, ["tests/fixture-server.mjs"], {
     DATA_DIR: dir,
     ADMIN_USER: "hq",
     ADMIN_PASSWORD: password,
+    PERSIST_DRIVER: "file",
+    PERSIST_FILE_DIR: persistDir,
+    GEOCODE_ON_START: "false",
   },
   stdio: "ignore",
 });
@@ -94,6 +98,16 @@ try {
   await page.getByLabel("Google 評價網址").fill("https://example.com/review");
   await page.getByRole("button", { name: "儲存門市", exact: true }).click();
   await page.getByText("門市已儲存；公開且已確認的內容會反映於前台").waitFor();
+  await page.getByRole("button", { name: "立即備份", exact: true }).click();
+  await page.getByText("雲端備份完成").waitFor();
+  mkdirSync("artifacts", { recursive: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "artifacts/admin-backup-390.png", fullPage: false });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "artifacts/admin-backup-375.png", fullPage: false });
+  await page.setViewportSize({ width: 390, height: 844 });
   const existing = await (
     await ctx.request.get(base + "/api/admin/stores")
   ).json();
@@ -273,4 +287,5 @@ try {
   child.kill("SIGTERM");
   await new Promise((r) => child.once("exit", r));
   rmSync(dir, { recursive: true, force: true });
+  rmSync(persistDir, { recursive: true, force: true });
 }

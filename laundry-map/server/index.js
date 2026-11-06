@@ -1,13 +1,29 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { openDb } from "./db.js";
 import { createApp } from "./app.js";
 import { seedKnownStores } from "./seed.js";
-import {locateKnownStores} from "./geocode.js";
+import { locateKnownStores } from "./geocode.js";
+import { persistenceFromEnv } from "./persist.js";
 process.chdir(fileURLToPath(new URL("..", import.meta.url)));
 const dataDir = resolve(process.env.DATA_DIR || "data");
 const production = process.env.NODE_ENV === "production";
+const persist = persistenceFromEnv();
+if (persist.configured && !existsSync(join(dataDir, "mcw.sqlite"))) {
+  try {
+    const restored = await persist.restoreInto(dataDir);
+    if (restored.restored) console.log("已從雲端還原門市資料：" + restored.snapshotId);
+    else console.log("雲端保存已設定，目前沒有可還原的備份（" + restored.reason + "）");
+  } catch (error) {
+    console.error("雲端還原失敗，改用本機資料目錄：" + error.message);
+  }
+} else if (!persist.configured && persist.driver !== "none") {
+  console.error(
+    "雲端保存未完成設定，缺少：" + (persist.missing || []).join("、"),
+  );
+}
 const db = openDb(dataDir);
 seedKnownStores(db);
 const app = createApp({
@@ -16,6 +32,7 @@ const app = createApp({
   adminUser: process.env.ADMIN_USER || "hq",
   adminPassword: process.env.ADMIN_PASSWORD,
   production,
+  persist,
 });
 if (production) {
   app.use(express.static("dist"));
@@ -37,4 +54,8 @@ app.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
   ),
 );
 
-if(production&&process.env.GEOCODE_ON_START==='true')locateKnownStores(db).catch(e=>console.error('地址定位服務：'+e.message));
+if (production && process.env.GEOCODE_ON_START === "true") {
+  locateKnownStores(db).catch((error) =>
+    console.error("地址定位服務：" + error.message),
+  );
+}

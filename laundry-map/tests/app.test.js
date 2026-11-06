@@ -76,6 +76,10 @@ async function req(path, method = "GET", body, auth = true, origin = base) {
 }
 test("server rejects unauthorized writes, missing/cross-site origins and invalid login", async () => {
   assert.equal((await req("/admin/stores", "POST", doc, false)).status, 401);
+  assert.equal((await req("/admin/persistence")).status, 401);
+  assert.equal((await req("/admin/persistence/backup", "POST", {})).status, 401);
+  assert.equal((await req("/admin/persistence/restore", "POST", { confirm: "RESTORE" })).status, 401);
+  assert.equal((await req("/admin/stores/missing/geocode", "POST", { force: true })).status, 401);
   assert.equal(
     (await req("/login", "POST", { username: "hq", password: "bad" }, false))
       .status,
@@ -115,6 +119,10 @@ test("headquarters CRUD persists and public API hides drafts and private provide
   const reopened = openDb(dir);
   assert.equal(reopened.prepare("SELECT count(*) AS n FROM stores").get().n, 1);
   reopened.close();
+  const cloud = await (await req("/admin/persistence")).json();
+  assert.equal(cloud.configured, false);
+  assert.equal((await req("/admin/persistence/backup", "POST", {})).status, 409);
+  assert.equal((await req("/admin/persistence/restore", "POST", {})).status, 400);
 });
 test("public machine statuses never leak simulated availability; demo requires admin", async () => {
   const statuses = await (await req(`/stores/${id}/status`)).json();

@@ -65,20 +65,20 @@ npm run build
 NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 ```
 
-有提供 `render.yaml` 部署範例：使用 permanent disk、HTTPS 與安全設定的 `ADMIN_PASSWORD`，不要將密碼寫入 YAML。Render Blueprint 可使用 repo 內此檔路徑；既有一頁式 GitHub Pages 不會啟動此 Node 服務。健康檢查 `/api/stores`。正式部署後需驗證 HTTPS 登入、圖片持久化與重啟保留資料。Render 權限／服務未配置，未建立公開測試站。完整設定與手機上線驗收步驟見 [部署說明](docs/DEPLOYMENT.md)。
+有提供 `render.yaml` 部署範例：維持 Render **free**、不掛付費磁碟，`DATA_DIR=/tmp/mcw-data`，HTTPS 與安全設定的 `ADMIN_PASSWORD` 不寫入 YAML。既有一頁式網站不會啟動此 Node 服務。健康檢查 `/api/stores`。公開站已在 `https://mcw-laundry-map.onrender.com`（free、無磁碟）。免費方案的 `/tmp` 會在重新啟動後清空；總部修改與上傳要保留，必須另設下方的雲端保存，不能把尚未填入金鑰的服務說成已開通。完整設定見 [部署說明](docs/DEPLOYMENT.md)。
 
 需要 npm registry、GitHub、OpenStreetMap 圖磚連線；雲端已保存額外需求 `api.github.com`、`drive.google.com`、`drive.usercontent.google.com`、`*.tile.openstreetmap.org` 至環境草稿。保存不代表已套用，請在環境設定檢閱儲存並發布。
 
 ## 尚待提供／驗收
 
 - 已收到並整合 `MCW_洗衣地圖_Codex交接包.zip`：正式 Logo、藍白貓咪、花蓮門市和設備照片已收入 `public/brand/`；來源清單、交接文件與三張參考圖存於 `docs/handoff/`。手機介面依地圖優先、門市資訊卡與科技藍配色調整；門市及加盟照片採手機寬度自適應 4:3 完整顯示，直式設備照保留原比例，門市／設備照片可開啟全螢幕查看；仍待使用者視覺驗收，不宣稱像素一致。參考圖的掃碼、會員付款、示例店數與空機數不在本次產品範圍。
-- 兩家已提供地址的門市已建入；總部仍需補精確座標、電話、時段、對應照片、設備費率與 YouTube／AI／評價／加盟／LINE 入口。未配置入口誠實顯示禁用。Nominatim 座標查詢在目前環境回應 403，因此沒有猜測標記位置。
-- 未配置原廠設備 API、LIFF、正式 ADMIN_PASSWORD、Render 部署；不影響本機開發與非假資料版本。
+- 兩家已提供地址的門市已建入。電話、時段、費率、機台數與對應照片仍未提供，維持空白，也不套用花蓮照片。官方 LINE 為 `https://lin.ee/s4v3cIG`。使用者提供的兩條 Google 短網址經 HTTP 轉址後分別是「魔彩泡泡自助洗衣-廣東南店」與「魔彩泡泡自助洗衣（洗脫烘一機到底）」，頁面沒有仙吉路 32 號或大豐一路 26 號，因此沒有採用。
+- 未配置原廠設備 API、LIFF。公開站的總部密碼由平台環境變數管理，不寫入程式。
 - PR 與測試網址狀態依交付回報；GitHub API 目前 Forbidden，已保存 API 網域需求，不能視為已建立 PR。
 
 ## 手機驗證截圖
 
-[附近地圖](docs/screenshots/nearby-390.png) · [屏東新園店](docs/screenshots/xinyuan-390.png) · [高雄大豐店](docs/screenshots/dafeng-390.png) · [全台總覽](docs/screenshots/taiwan-390.png) · [門市詳情（隔離 DEMO 測試資料）](docs/screenshots/detail-demo-390.png) · [YouTube 教學空狀態](docs/screenshots/tutorials-390.png) · [加盟入口空狀態](docs/screenshots/franchise-390.png)。手機預覽固定為 375×812 或 390×844 的單一視窗，另保留詳情長頁檢查圖；不是將整頁長圖縮成手機大小。此為 390px 實際 UI；街道圖磚在測試中被阻擋，底圖為隨程式提供的 Natural Earth 真實臺灣輪廓；門市列表地址為使用者提供資料，精確座標仍待確認。
+[附近地圖](docs/screenshots/nearby-390.png) · [屏東新園店](docs/screenshots/xinyuan-390.png) · [高雄大豐店](docs/screenshots/dafeng-390.png) · [全台總覽](docs/screenshots/taiwan-390.png) · [門市詳情（隔離 DEMO 測試資料）](docs/screenshots/detail-demo-390.png) · [YouTube 教學空狀態](docs/screenshots/tutorials-390.png) · [加盟入口空狀態](docs/screenshots/franchise-390.png) · [總部雲端備份 390](docs/screenshots/admin-backup-390.png) · [總部雲端備份 375](docs/screenshots/admin-backup-375.png)。手機預覽固定為 375×812 或 390×844 的單一視窗，另保留詳情長頁檢查圖；不是將整頁長圖縮成手機大小。此為 390px 實際 UI；街道圖磚在測試中被阻擋，底圖為隨程式提供的 Natural Earth 真實臺灣輪廓；門市列表地址為使用者提供資料，精確座標仍待確認。
 
 ## 內建臺灣輪廓
 
@@ -96,7 +96,17 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 
 ## 部署站地址定位
 
-在 Render 設定 `GEOCODE_ON_START=true` 後重新部署，伺服器會使用 Nominatim 對兩家使用者提供的地址各查詢一次，間隔至少 1.1 秒，且不阻擋網站啟動。只有縣市、路名、門牌均相符且結果唯一時才保存座標；失敗或歧義不建立標記。查詢紀錄保存在資料庫，避免每次啟動重複請求。免費版儲存空間重建後紀錄也會消失，因此定位完成後建議關閉此開關，並將確認座標另行保存。第三方查詢可能沒有該門牌資料；測試使用隔離測試回應，不代表兩家真實座標已查得。
+`GEOCODE_ON_START=true` 時，啟動後對已公開、已核實且還沒有座標的門市做結構化 Nominatim 查詢（固定主機、識別用 User-Agent、12 秒逾時、每筆至少間隔 1.1 秒、單次啟動最多 5 筆）。查詢使用路名與門牌加上縣或市，不使用整句自由搜尋。只有門牌、路名、縣市與鄉鎮市區都相符、結果唯一、而且沒有被標成其他店名時才寫入座標。道路幾何、縣市中心、空結果、HTTP 錯誤、逾時與多個座標都不會變成圖標。
+
+嘗試結果寫入 `geocode_attempts`，失敗就是失敗。成功或未過重試間隔（預設 6 小時）的同一地址不會立刻再查，避免打成迴圈。舊的 `bootstrap_records` 鍵 `geocode-attempt-v1` 若在送出請求前就寫入，不再阻止之後的查詢。總部可在門市編輯按「查詢地址座標」；已有座標不會被自動覆寫。沒有座標時，導航仍使用完整地址。
+
+以 2026-11-06 實際 Nominatim 回應做成測試：高雄市三民區大豐一路 26 號唯一相符的是未命名門牌節點，屏東縣新園鄉仙吉路 32 號唯一門牌被標成「全聯福利中心」，因此只會寫入高雄店、不會寫入新園店。這不是把道路中心當成店址。公開站要等此版本部署並完成當次查詢後，高雄店才會出現圖標。
+
+## 雲端門市資料
+
+總部後台可維護店名、地址、電話、營業時間、座標、照片與機台配置，並可立即備份或還原。執行中的資料庫仍是 Node SQLite。`PERSIST_DRIVER=file` 會把一致備份寫到 `DATA_DIR` 外的目錄；`PERSIST_DRIVER=s3` 使用 S3 相容 API（含 Cloudflare R2 免費額度這類服務）的 SigV4 上傳。啟動時若本機還沒有 `mcw.sqlite`，會先還原最新且 SHA-256 相符的備份。備份不含登入工作階段。
+
+金鑰只從環境變數讀取。沒有設好驅動或金鑰時，網站仍可啟動，後台會顯示尚未設定與缺少的變數名稱，不會假裝已經連上雲端。目前這份程式沒有代填任何物件儲存金鑰。Render Free 的 `/tmp` 本身仍會在休眠或重新部署後清空。
 
 手機地圖與門市列表採不重疊配置：地圖模式的卡片位於地圖下方；切換「列表」可直接查看門市。瀏覽器驗收會檢查兩區的實際邊界，避免卡片再次遮住地圖。
 
