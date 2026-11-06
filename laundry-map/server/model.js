@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { isPhotoPath } from "../shared/brand.js";
+import {
+  EQUIPMENT_TYPES,
+  capacityKg,
+  isOfficialCount,
+} from "../shared/storefront.js";
 const link = z
   .string()
   .max(2000)
@@ -30,24 +35,35 @@ const youtube = link.refine((v) => {
   }
 }, "請填寫 YouTube 網址");
 const photo = z.string().refine(isPhotoPath, "請選擇已上傳的照片或品牌素材");
-export const equipmentSchema = z.object({
-  id: z.string().min(1).max(100),
-  type: z.enum(["洗脫烘", "雙層烘", "加水站"]),
-  number: z.string().max(50).default(""),
-  specification: z.string().max(500).default(""),
-  photos: z.array(photo).max(6).default([]),
-  model: z.string().max(100),
-  capacity: z.string().max(100),
-  quantity: z.number().int().min(1).max(1000),
-  price: z.string().max(200),
-  providerKey: z.string().max(100).default(""),
-});
+export const equipmentSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+    type: z.enum(EQUIPMENT_TYPES),
+    number: z.string().max(50).default(""),
+    specification: z.string().max(500).default(""),
+    photos: z.array(photo).max(6).default([]),
+    model: z.string().max(100),
+    capacity: z.string().max(100),
+    quantity: z.number().int().min(1).max(1000),
+    price: z.string().max(200),
+    providerKey: z.string().max(100).default(""),
+  })
+  .superRefine((equipment, context) => {
+    if (!equipment.id.startsWith("count:")) return;
+    const kg = capacityKg(equipment.capacity);
+    if (!isOfficialCount(equipment.type, kg)) {
+      context.addIssue({
+        code: "custom",
+        message: "機型容量不在清單內",
+      });
+    }
+  });
 export const storeSchema = z
   .object({
     name: z.string().trim().min(1).max(100),
     openingStatus: z
       .enum(["open", "planned", "temporarily_closed", "unknown"])
-      .default("unknown"),
+      .default("open"),
     city: z.string().max(20),
     address: z.string().max(300),
     phone: z
@@ -74,6 +90,8 @@ export const storeSchema = z
     aiUrl: link,
     reviewUrl: link,
     franchiseUrl: link,
+    machineQueryMode: z.enum(["off", "button"]).default("off"),
+    machineQueryUrl: link.default(""),
     provider: z.enum(["unconnected", "demo"]).default("unconnected"),
     providerReference: z.string().max(200).default(""),
   })
@@ -140,10 +158,18 @@ export function normalizeStatus(raw, now = Date.now()) {
         : s.remaining_seconds,
   };
 }
+/** Manual machine-page link. A selected provider owns status and suppresses this button. */
+export function publicMachineQueryUrl(store) {
+  if (!store || (store.provider || "unconnected") !== "unconnected") return "";
+  if (store.machineQueryMode !== "button") return "";
+  if (typeof store.machineQueryUrl !== "string") return "";
+  return store.machineQueryUrl.trim();
+}
 export function publicStore(s) {
-  const { providerReference, provider, ...rest } = s;
+  const { providerReference, provider, machineQueryMode, ...rest } = s;
   return {
     ...rest,
+    machineQueryUrl: publicMachineQueryUrl(s),
     equipment: rest.equipment.map(({ providerKey, ...e }) => e),
   };
 }

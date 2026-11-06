@@ -60,6 +60,7 @@ try {
   await run("tests/mobile.mjs", {
     ...process.env,
     TEST_BASE_URL: `http://127.0.0.1:${port}`,
+    DATA_DIR: dir,
   });
   await run("tests/taiwan-overview.mjs", {
     ...process.env,

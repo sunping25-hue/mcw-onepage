@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { DEFAULT_STORE_HOURS } from "../shared/storefront.js";
 import { storeSchema } from "./model.js";
 const stores = JSON.parse(
   readFileSync(
@@ -15,9 +16,9 @@ function blankStore(entry) {
     name: entry.name,
     city: entry.city,
     address: entry.address,
-    openingStatus: "unknown",
+    openingStatus: "open",
     phone: "",
-    hours: "",
+    hours: DEFAULT_STORE_HOURS,
     announcement: "",
     lat: null,
     lng: null,
@@ -29,6 +30,8 @@ function blankStore(entry) {
     aiUrl: "",
     reviewUrl: "",
     franchiseUrl: "",
+    machineQueryMode: "off",
+    machineQueryUrl: "",
     provider: "unconnected",
     providerReference: "",
   });
@@ -82,4 +85,46 @@ export function applyVerifiedCoordinates(db) {
     throw error;
   }
   return filled;
+}
+
+const OPERATING_DEFAULTS_KEY = "store-operating-defaults-v1";
+/** One-time fill of blank hours and unknown status. Never rewrites other fields or later edits. */
+export function applyStoreOperatingDefaults(db) {
+  const seen = db
+    .prepare("SELECT key FROM bootstrap_records WHERE key=?")
+    .get(OPERATING_DEFAULTS_KEY);
+  if (seen) return { hours: 0, opening: 0 };
+  const rows = db.prepare("SELECT id, document FROM stores").all();
+  const update = db.prepare(
+    "UPDATE stores SET document=?, updated_at=? WHERE id=?",
+  );
+  const mark = db.prepare("INSERT INTO bootstrap_records VALUES(?,?)");
+  let hours = 0;
+  let opening = 0;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const row of rows) {
+      const document = JSON.parse(row.document);
+      let changed = false;
+      if (typeof document.hours !== "string" || !document.hours.trim()) {
+        document.hours = DEFAULT_STORE_HOURS;
+        hours += 1;
+        changed = true;
+      }
+      if (!document.openingStatus || document.openingStatus === "unknown") {
+        document.openingStatus = "open";
+        opening += 1;
+        changed = true;
+      }
+      if (changed) {
+        update.run(JSON.stringify(document), new Date().toISOString(), row.id);
+      }
+    }
+    mark.run(OPERATING_DEFAULTS_KEY, new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+  return { hours, opening };
 }

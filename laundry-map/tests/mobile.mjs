@@ -1,12 +1,99 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { join } from "node:path";
+const YOUTUBE_CHANNEL =
+  "https://www.youtube.com/@%E9%AD%94%E5%BD%A9%E8%87%AA%E5%8A%A9%E6%B4%97%E8%A1%A3%E5%8A%A0%E7%9B%9F";
+const MACHINE_URL = "https://liff.line.me/2008703133-cY6Q4zpY";
+const REVIEW_URL = "https://maps.app.goo.gl/BUQj9nudUjPNoFSc7?g_st=ic";
+const WUYING_ID = "mcw-kaohsiung-fengshan-wuying-228";
+function previewWuying(dataDir) {
+  const db = new DatabaseSync(join(dataDir, "mcw.sqlite"));
+  const row = db.prepare("SELECT document FROM stores WHERE id=?").get(WUYING_ID);
+  const document = JSON.parse(row.document);
+  assert.equal(document.hours, "24小時");
+  assert.equal(document.openingStatus, "open");
+  assert.equal(document.reviewUrl, "");
+  assert.equal(document.machineQueryUrl, "");
+  assert.equal(document.equipment.length, 0);
+  document.machineQueryMode = "button";
+  document.machineQueryUrl = MACHINE_URL;
+  document.reviewUrl = REVIEW_URL;
+  document.equipment = [
+    {
+      id: "count:洗脫烘:16",
+      type: "洗脫烘",
+      capacity: "16KG",
+      quantity: 5,
+      model: "",
+      price: "",
+    },
+    {
+      id: "count:雙層烘:16",
+      type: "雙層烘",
+      capacity: "16KG",
+      quantity: 2,
+      model: "",
+      price: "",
+    },
+  ];
+  db.prepare("UPDATE stores SET document=? WHERE id=?").run(
+    JSON.stringify(document),
+    WUYING_ID,
+  );
+  db.close();
+}
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
   headless: true,
   args: ["--no-sandbox"],
 });
 mkdirSync("artifacts", { recursive: true });
+const baseUrl = process.env.TEST_BASE_URL || "http://127.0.0.1:3100";
+const catalog = JSON.parse(
+  readFileSync(new URL("../config/initial-stores.json", import.meta.url), "utf8"),
+);
+const seeded = await (await fetch(baseUrl + "/api/stores")).json();
+assert.equal(seeded.length, 15);
+for (const entry of catalog) {
+  const store = seeded.find((item) => item.id === entry.id);
+  assert.ok(store, entry.id);
+  assert.equal(store.name, entry.name);
+  assert.equal(store.address, entry.address);
+  assert.equal(store.city, entry.city);
+  assert.equal(store.lat, entry.lat);
+  assert.equal(store.lng, entry.lng);
+  assert.equal(store.hours, "24小時");
+  assert.equal(store.openingStatus, "open");
+  assert.equal(store.reviewUrl, "");
+  assert.equal(store.machineQueryUrl, "");
+  assert.equal(store.equipment.length, 0);
+  const serialized = JSON.stringify(store);
+  assert.equal(serialized.includes(MACHINE_URL), false);
+  assert.equal(serialized.includes("maps.app.goo.gl"), false);
+}
+previewWuying(process.env.DATA_DIR);
+const previewStores = await (await fetch(baseUrl + "/api/stores")).json();
+assert.equal(
+  previewStores.filter((store) => store.machineQueryUrl === MACHINE_URL).map((store) => store.id).join(),
+  WUYING_ID,
+);
+assert.equal(
+  previewStores.filter((store) => store.reviewUrl === REVIEW_URL).map((store) => store.id).join(),
+  WUYING_ID,
+);
+for (const store of previewStores) {
+  assert.equal(store.hours, "24小時");
+  assert.equal(store.openingStatus, "open");
+  if (store.id !== WUYING_ID) {
+    assert.equal(store.machineQueryUrl, "");
+    assert.equal(store.reviewUrl, "");
+    assert.equal(store.equipment.length, 0);
+    assert.equal(store.name, catalog.find((entry) => entry.id === store.id).name);
+    assert.equal(store.address, catalog.find((entry) => entry.id === store.id).address);
+  }
+}
 for (const width of [375, 390, 1280]) {
   const context = await browser.newContext({
     viewport: { width, height: width === 375 ? 812 : 844 },
@@ -286,9 +373,98 @@ for (const width of [375, 390, 1280]) {
     path: `artifacts/franchise-${width}.png`,
     fullPage: true,
   });
-  await page.goto(
-    (process.env.TEST_BASE_URL || "http://127.0.0.1:3100") + "/admin",
-  );
+  await page.goto(baseUrl + "/");
+  await page.locator(".opening-badge").first().waitFor();
+  assert.equal(await page.locator(".opening-badge").count(), 15);
+  assert.equal(await page.getByText("營業狀態待確認").count(), 0);
+  const badgePaint = await page.locator(".opening-badge").first().evaluate((el) => {
+    const style = getComputedStyle(el);
+    return {
+      text: el.textContent,
+      color: style.color,
+      background: style.backgroundColor,
+    };
+  });
+  assert.equal(badgePaint.text, "營業中");
+  assert.equal(badgePaint.color, "rgb(255, 255, 255)");
+  assert.equal(badgePaint.background, "rgb(11, 106, 48)");
+  await page.locator(".store-list").screenshot({
+    path: `artifacts/open-badges-${width}.png`,
+  });
+  for (const entry of catalog) {
+    await page.goto(baseUrl + "/?store=" + entry.id);
+    await page.getByRole("heading", { name: entry.name, exact: true }).waitFor();
+    await page.locator(".detail > p").getByText(entry.address, { exact: true }).waitFor();
+    await page.getByText("營業時間：24小時", { exact: true }).waitFor();
+    await page.getByText("尚未串接設備，即時狀態暫不可用 · 不提供空機數或倒數預估").waitFor();
+    assert.equal(await page.getByText("本店尚未配置操作教學影片。").count(), 0);
+    assert.equal(await page.getByText("營業狀態待確認").count(), 0);
+    const detailBadge = page.locator(".detail .opening-badge");
+    assert.equal(await detailBadge.innerText(), "營業中");
+    const detailPaint = await detailBadge.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { color: style.color, background: style.backgroundColor };
+    });
+    assert.equal(detailPaint.color, "rgb(255, 255, 255)");
+    assert.equal(detailPaint.background, "rgb(11, 106, 48)");
+    const channel = page.getByRole("link", { name: "YouTube 操作教學", exact: true });
+    assert.equal(await channel.getAttribute("href"), YOUTUBE_CHANNEL);
+    assert.equal(await channel.getAttribute("target"), "_blank");
+    assert.equal(await channel.getAttribute("rel"), "noopener noreferrer");
+    assert.equal(await channel.locator("svg").count(), 1);
+    if (entry.id === WUYING_ID) {
+      await page.getByText("洗脫烘 16KG｜5台", { exact: true }).waitFor();
+      await page.getByText("雙層烘 16KG｜2台", { exact: true }).waitFor();
+      assert.equal(await page.getByText("設備資料待總部補充。").count(), 0);
+      const review = page.getByRole("link", { name: "Google 評價 ↗", exact: true });
+      const machines = page.getByRole("link", { name: "空機查詢 ↗", exact: true });
+      assert.equal(await review.getAttribute("href"), REVIEW_URL);
+      assert.equal(await review.getAttribute("target"), "_blank");
+      assert.equal(await review.getAttribute("rel"), "noopener noreferrer");
+      assert.equal(await machines.getAttribute("href"), MACHINE_URL);
+      assert.equal(await machines.getAttribute("target"), "_blank");
+      assert.equal(await machines.getAttribute("rel"), "noopener noreferrer");
+      if (width === 1280) {
+        const detailUrl = page.url();
+        const machinePopupPromise = page.waitForEvent("popup");
+        await machines.click();
+        const machinePopup = await machinePopupPromise;
+        await machinePopup.waitForLoadState("domcontentloaded");
+        assert.equal(page.url(), detailUrl);
+        const landed = machinePopup.url();
+        assert.ok(
+          landed.startsWith(MACHINE_URL) || landed.includes("waitershop.betcoin.tw/Home/Index"),
+          landed,
+        );
+        if (landed.includes("waitershop.betcoin.tw")) {
+          assert.equal(new URL(landed).searchParams.get("StoreID"), "G7HO28GT3MIS");
+        }
+        await machinePopup.close();
+        const channelPopupPromise = page.waitForEvent("popup");
+        await channel.click();
+        const channelPopup = await channelPopupPromise;
+        await channelPopup.waitForLoadState("domcontentloaded");
+        assert.equal(page.url(), detailUrl);
+        assert.ok(channelPopup.url().includes("youtube.com"), channelPopup.url());
+        await channelPopup.close();
+      }
+      await page.screenshot({ path: `artifacts/wuying-${width}.png`, fullPage: true });
+    } else {
+      assert.equal(await page.getByRole("link", { name: "空機查詢 ↗" }).count(), 0);
+      assert.equal(await page.getByText("設備資料待總部補充。", { exact: true }).count(), 1);
+      assert.equal(await page.getByText("Google 評價・尚未設定", { exact: true }).count(), 1);
+      assert.equal(await page.locator(`a[href="${MACHINE_URL}"]`).count(), 0);
+      assert.equal(await page.locator('a[href*="maps.app.goo.gl"]').count(), 0);
+      if (entry.id === "mcw-kaohsiung-sanmin-dafeng-26" && width === 390) {
+        await page.screenshot({ path: "artifacts/dafeng-plain-390.png", fullPage: true });
+      }
+    }
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      true,
+    );
+  }
+  await page.goto(baseUrl + "/admin");
   await page.getByRole("heading", { name: "總部管理登入" }).waitFor();
   await page.screenshot({
     path: `artifacts/admin-${width}.png`,

@@ -6,14 +6,21 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { openDb } from "../server/db.js";
 import { createApp } from "../server/app.js";
-import { applyVerifiedCoordinates, seedKnownStores } from "../server/seed.js";
+import {
+  applyStoreOperatingDefaults,
+  applyVerifiedCoordinates,
+  seedKnownStores,
+} from "../server/seed.js";
 import {
   MachineStatusProvider,
   ManufacturerApiAdapter,
   StubMachineStatusProvider,
   normalizeStatus,
+  publicMachineQueryUrl,
+  publicStore,
   storeSchema,
 } from "../server/model.js";
+import { catalogChips } from "../shared/storefront.js";
 const dir = mkdtempSync(join(tmpdir(), "mcw-test-"));
 let db, server, base, cookie, id;
 const doc = {
@@ -108,6 +115,9 @@ test("headquarters CRUD persists and public API hides drafts and private provide
   assert.equal(published.length, 1);
   assert.equal(published[0].providerReference, undefined);
   assert.equal(published[0].equipment[0].providerKey, undefined);
+  assert.equal(published[0].reviewUrl, "");
+  assert.equal(published[0].machineQueryUrl, "");
+  assert.equal(published[0].machineQueryMode, undefined);
   assert.equal(
     (await req("/admin/stores/" + id, "PUT", { ...doc, confirmed: false }))
       .status,
@@ -387,9 +397,9 @@ test("owner-provided stores seed once, retain exact addresses, and do not invent
           s.lng === null &&
           s.confirmed &&
           s.published &&
-          s.openingStatus === "unknown" &&
+          s.openingStatus === "open" &&
           s.phone === "" &&
-          s.hours === "" &&
+          s.hours === "24小時" &&
           s.photos.length === 0 &&
           s.equipment.length === 0,
       ),
@@ -528,6 +538,156 @@ test("map requests retain origin attribution without leaking store query paramet
     r.headers.get("referrer-policy"),
     "strict-origin-when-cross-origin",
   );
+});
+
+test("operating defaults fill only blank hours and unknown status once", () => {
+  const path = mkdtempSync(join(tmpdir(), "mcw-hours-test-"));
+  const db = openDb(path);
+  try {
+    seedKnownStores(db);
+    const rows = db.prepare("SELECT id, document FROM stores").all();
+    const wuying = rows.find((row) => row.id === "mcw-kaohsiung-fengshan-wuying-228");
+    const custom = rows.find((row) => row.id !== wuying.id);
+    const removed = rows.find((row) => row.id !== wuying.id && row.id !== custom.id);
+    const legacy = JSON.parse(wuying.document);
+    legacy.hours = "";
+    legacy.openingStatus = "unknown";
+    legacy.ownerNote = "保留";
+    legacy.reviewUrl = "https://maps.app.goo.gl/BUQj9nudUjPNoFSc7?g_st=ic";
+    legacy.announcement = "總部公告";
+    db.prepare("UPDATE stores SET document=? WHERE id=?").run(JSON.stringify(legacy), wuying.id);
+    const kept = JSON.parse(custom.document);
+    kept.hours = "總部時段";
+    kept.openingStatus = "planned";
+    kept.reviewUrl = "https://example.com/owner-review";
+    db.prepare("UPDATE stores SET document=? WHERE id=?").run(JSON.stringify(kept), custom.id);
+    db.prepare("DELETE FROM stores WHERE id=?").run(removed.id);
+    const filled = applyStoreOperatingDefaults(db);
+    assert.equal(filled.hours >= 1, true);
+    assert.equal(filled.opening >= 1, true);
+    const afterWuying = JSON.parse(db.prepare("SELECT document FROM stores WHERE id=?").get(wuying.id).document);
+    assert.equal(afterWuying.hours, "24小時");
+    assert.equal(afterWuying.openingStatus, "open");
+    assert.equal(afterWuying.ownerNote, "保留");
+    assert.equal(afterWuying.reviewUrl, "https://maps.app.goo.gl/BUQj9nudUjPNoFSc7?g_st=ic");
+    assert.equal(afterWuying.announcement, "總部公告");
+    assert.equal(afterWuying.name, "鳳山-武營洗衣");
+    assert.equal(afterWuying.address, "高雄市鳳山區武營路228號");
+    assert.equal(afterWuying.machineQueryUrl || "", "");
+    const afterCustom = JSON.parse(db.prepare("SELECT document FROM stores WHERE id=?").get(custom.id).document);
+    assert.equal(afterCustom.hours, "總部時段");
+    assert.equal(afterCustom.openingStatus, "planned");
+    assert.equal(afterCustom.reviewUrl, "https://example.com/owner-review");
+    assert.equal(afterCustom.name, kept.name);
+    assert.equal(db.prepare("SELECT id FROM stores WHERE id=?").get(removed.id), undefined);
+    afterWuying.hours = "";
+    db.prepare("UPDATE stores SET document=? WHERE id=?").run(JSON.stringify(afterWuying), wuying.id);
+    assert.deepEqual(applyStoreOperatingDefaults(db), { hours: 0, opening: 0 });
+    assert.equal(JSON.parse(db.prepare("SELECT document FROM stores WHERE id=?").get(wuying.id).document).hours, "");
+    seedKnownStores(db);
+    assert.equal(JSON.parse(db.prepare("SELECT document FROM stores WHERE id=?").get(custom.id).document).hours, "總部時段");
+  } finally {
+    db.close();
+    rmSync(path, { recursive: true, force: true });
+  }
+});
+
+test("machine counts and query links stay per store and reject invalid quantities", async () => {
+  const path = mkdtempSync(join(tmpdir(), "mcw-counts-test-"));
+  const db = openDb(path);
+  let server;
+  try {
+    seedKnownStores(db);
+    applyStoreOperatingDefaults(db);
+    const raw = db.prepare("SELECT document FROM stores").all().map((row) => row.document).join("\n");
+    assert.equal(raw.includes("liff.line.me"), false);
+    assert.equal(raw.includes("count:洗脫烘:12"), false);
+    const app = createApp({
+      db,
+      dataDir: path,
+      adminUser: "hq",
+      adminPassword: "test-only-password-123456",
+    });
+    server = app.listen(0, "127.0.0.1");
+    await new Promise((resolve) => server.once("listening", resolve));
+    const origin = "http://127.0.0.1:" + server.address().port;
+    const login = await fetch(origin + "/api/login", {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "hq", password: "test-only-password-123456" }),
+    });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const id = "mcw-kaohsiung-fengshan-wuying-228";
+    const current = JSON.parse(db.prepare("SELECT document FROM stores WHERE id=?").get(id).document);
+    const count = {
+      id: "count:洗脫烘:16",
+      type: "洗脫烘",
+      capacity: "16KG",
+      quantity: 5,
+      model: "",
+      price: "",
+    };
+    const saved = await fetch(origin + "/api/admin/stores/" + id, {
+      method: "PUT",
+      headers: { Origin: origin, Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...current,
+        machineQueryMode: "button",
+        machineQueryUrl: "https://liff.line.me/2008703133-cY6Q4zpY",
+        equipment: [count],
+      }),
+    });
+    assert.equal(saved.status, 200);
+    const stored = JSON.parse(db.prepare("SELECT document FROM stores WHERE id=?").get(id).document);
+    assert.equal(stored.name, current.name);
+    assert.equal(stored.address, current.address);
+    assert.equal(stored.hours, current.hours);
+    assert.equal(stored.lat, current.lat);
+    assert.equal(stored.lng, current.lng);
+    assert.equal(stored.reviewUrl, "");
+    assert.equal(stored.equipment.length, 1);
+    assert.equal(stored.equipment[0].quantity, 5);
+    const published = await (await fetch(origin + "/api/stores")).json();
+    assert.equal(published.length, 15);
+    for (const store of published) {
+      if (store.id === id) {
+        assert.equal(store.machineQueryUrl, "https://liff.line.me/2008703133-cY6Q4zpY");
+        assert.deepEqual(catalogChips(store.equipment).map((chip) => chip.label), ["洗脫烘 16KG｜5台"]);
+      } else {
+        assert.equal(store.machineQueryUrl, "");
+        assert.equal(store.equipment.length, 0);
+        assert.equal(store.hours, "24小時");
+        assert.equal(store.openingStatus, "open");
+      }
+    }
+    assert.equal(storeSchema.safeParse({ ...doc, equipment: [{ ...doc.equipment[0], quantity: 0 }] }).success, false);
+    assert.equal(storeSchema.safeParse({ ...doc, equipment: [{ ...doc.equipment[0], quantity: 1.5 }] }).success, false);
+    assert.equal(storeSchema.safeParse({ ...doc, equipment: [{ ...doc.equipment[0], quantity: -1 }] }).success, false);
+    assert.equal(storeSchema.safeParse({
+      ...doc,
+      equipment: [{ ...count, id: "count:洗脫烘:12", capacity: "12KG", type: "洗脫烘" }],
+    }).success, false);
+    assert.equal(storeSchema.safeParse({
+      ...doc,
+      machineQueryUrl: "javascript:alert(1)",
+    }).success, false);
+    assert.equal(publicMachineQueryUrl({ provider: "demo", machineQueryMode: "button", machineQueryUrl: "https://example.com/machines" }), "");
+    assert.equal(publicMachineQueryUrl({ provider: "unconnected", machineQueryMode: "off", machineQueryUrl: "https://example.com/machines" }), "");
+    assert.equal(publicMachineQueryUrl({ provider: "unconnected", machineQueryMode: "button", machineQueryUrl: "" }), "");
+    const hidden = publicStore({
+      id: "other",
+      ...doc,
+      provider: "demo",
+      machineQueryMode: "button",
+      machineQueryUrl: "https://example.com/machines",
+    });
+    assert.equal(hidden.machineQueryUrl, "");
+    assert.equal(hidden.machineQueryMode, undefined);
+  } finally {
+    if (server) await new Promise((resolve) => server.close(resolve));
+    db.close();
+    rmSync(path, { recursive: true, force: true });
+  }
 });
 
 test('official LINE is initialized once without overwriting later headquarters settings',()=>{
