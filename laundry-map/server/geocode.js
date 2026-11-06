@@ -3,6 +3,12 @@
 // house number, and that is not tagged as a different business.
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+// Only the two originally confirmed addresses are queried on startup.
+// Later owner-supplied rows stay unlistable as map pins until headquarters asks.
+const AUTOMATIC_ADDRESSES = new Set([
+  "高雄市三民區大豐一路26號",
+  "屏東縣新園鄉仙吉路32號",
+]);
 const USER_AGENT =
   "MCW-Laundry-Map/1.0 (store geocoding; https://mcw-laundry-map.onrender.com)";
 const DEFAULT_RETRY_MS = 6 * 60 * 60 * 1000;
@@ -262,6 +268,7 @@ export async function locateKnownStores(
       lng: null,
     };
     if (!force && (!store.confirmed || !store.published)) continue;
+    if (!force && !AUTOMATIC_ADDRESSES.has(store.address)) continue;
     if (force && !store.confirmed) {
       attempts.push({
         ...base,

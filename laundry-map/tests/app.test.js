@@ -317,12 +317,45 @@ test("owner-provided stores seed once, retain exact addresses, and do not invent
     const rows = seeded
       .prepare("SELECT id,document FROM stores ORDER BY id")
       .all();
-    assert.equal(rows.length, 2);
-    const docs = rows.map((r) => JSON.parse(r.document));
+    assert.equal(rows.length, 15);
+    const docs = rows.map((r) => ({ id: r.id, ...JSON.parse(r.document) }));
+    const byAddress = new Map(docs.map((s) => [s.address, s]));
+    assert.equal(byAddress.get("屏東縣新園鄉仙吉路32號").name, "魔彩自助洗衣・屏東新園店");
+    assert.equal(byAddress.get("高雄市三民區大豐一路26號").name, "魔彩自助洗衣・高雄大豐店");
     assert.deepEqual(
-      new Set(docs.map((s) => s.address)),
-      new Set(["屏東縣新園鄉仙吉路32號", "高雄市三民區大豐一路26號"]),
+      [
+        "桃園-民生洗衣（衣美專家）",
+        "關廟店",
+        "屏東-德豐洗衣（寶朕盈）",
+        "屏東-廣東南洗衣",
+        "鳳山-福誠洗衣",
+        "大寮-鳳林洗衣",
+        "萬丹-香社洗衣",
+        "大寮-非凡洗衣",
+        "屏東-大連洗衣",
+        "鳳山-武營洗衣",
+        "前鎮-賢明（淨衣閣）",
+        "保長店",
+        "台中嶺東店",
+      ].map((name) => docs.find((s) => s.name === name)?.address),
+      [
+        "桃園市民生路860號",
+        "台南市關廟區中正路1029號",
+        "屏東市德豐街142號",
+        "屏東市廣東南路73號",
+        "高雄市鳳山區福誠三街16號",
+        "大寮區鳳林三路29號",
+        "屏東縣萬丹鄉中興路一段111號",
+        "高雄市大寮區鳳林三路105巷24弄19號",
+        "屏東市大連路32-4號",
+        "高雄市鳳山區武營路228號",
+        "高雄市前鎮區賢明路19號",
+        "新北市汐止區保長路19巷1號",
+        "臺中市南屯區永春南路61巷18號",
+      ],
     );
+    assert.equal(byAddress.get("大寮區鳳林三路29號").city, "高雄市");
+    assert.equal(byAddress.get("臺中市南屯區永春南路61巷18號").city, "臺中市");
     assert.ok(
       docs.every(
         (s) =>
@@ -331,21 +364,71 @@ test("owner-provided stores seed once, retain exact addresses, and do not invent
           s.confirmed &&
           s.published &&
           s.openingStatus === "unknown" &&
-          s.phone === "",
+          s.phone === "" &&
+          s.hours === "" &&
+          s.photos.length === 0 &&
+          s.equipment.length === 0,
       ),
     );
-    seeded.prepare("DELETE FROM stores WHERE id=?").run(rows[0].id);
-    const edited = { ...docs[1], hours: "總部更新" };
+    const removed = docs.find((s) => s.name === "關廟店");
+    const kept = docs.find((s) => s.address === "高雄市三民區大豐一路26號");
+    seeded.prepare("DELETE FROM stores WHERE id=?").run(removed.id);
+    const edited = { ...kept, hours: "總部更新" };
+    delete edited.id;
     seeded
       .prepare("UPDATE stores SET document=? WHERE id=?")
-      .run(JSON.stringify(edited), rows[1].id);
+      .run(JSON.stringify(edited), kept.id);
     seedKnownStores(seeded);
-    assert.equal(seeded.prepare("SELECT count(*) AS n FROM stores").get().n, 1);
+    assert.equal(seeded.prepare("SELECT count(*) AS n FROM stores").get().n, 14);
     assert.equal(
-      JSON.parse(seeded.prepare("SELECT document FROM stores").get().document)
-        .hours,
+      seeded.prepare("SELECT id FROM stores WHERE id=?").get(removed.id),
+      undefined,
+    );
+    assert.equal(
+      JSON.parse(
+        seeded.prepare("SELECT document FROM stores WHERE id=?").get(kept.id)
+          .document,
+      ).hours,
       "總部更新",
     );
+    const legacyPath = mkdtempSync(join(tmpdir(), "mcw-seed-legacy-"));
+    const legacy = openDb(legacyPath);
+    try {
+      legacy
+        .prepare("INSERT INTO bootstrap_records VALUES(?,?)")
+        .run("owner-provided-stores-v1", new Date().toISOString());
+      for (const address of ["屏東縣新園鄉仙吉路32號", "高雄市三民區大豐一路26號"]) {
+        const current = byAddress.get(address);
+        const { id, ...document } = current;
+        if (address.endsWith("32號")) document.hours = "總部已改";
+        legacy
+          .prepare("INSERT INTO stores VALUES(?,?,?)")
+          .run(id, JSON.stringify(document), new Date().toISOString());
+      }
+      seedKnownStores(legacy);
+      assert.equal(legacy.prepare("SELECT count(*) AS n FROM stores").get().n, 15);
+      assert.equal(
+        JSON.parse(
+          legacy
+            .prepare("SELECT document FROM stores WHERE id=?")
+            .get(byAddress.get("屏東縣新園鄉仙吉路32號").id).document,
+        ).hours,
+        "總部已改",
+      );
+      assert.equal(
+        JSON.parse(
+          legacy
+            .prepare(
+              "SELECT document FROM stores WHERE json_extract(document,'$.name')=?",
+            )
+            .get("大寮-鳳林洗衣").document,
+        ).address,
+        "大寮區鳳林三路29號",
+      );
+    } finally {
+      legacy.close();
+      rmSync(legacyPath, { recursive: true, force: true });
+    }
     assert.equal(
       storeSchema.safeParse({ ...doc, lat: null, lng: 121 }).success,
       false,

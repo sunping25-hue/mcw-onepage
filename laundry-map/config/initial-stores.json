@@ -1,14 +1,107 @@
 [
   {
     "id": "mcw-pingtung-xinyuan-xianji-32",
+    "batch": "v1",
     "name": "魔彩自助洗衣・屏東新園店",
     "city": "屏東縣",
     "address": "屏東縣新園鄉仙吉路32號"
   },
   {
     "id": "mcw-kaohsiung-sanmin-dafeng-26",
+    "batch": "v1",
     "name": "魔彩自助洗衣・高雄大豐店",
     "city": "高雄市",
     "address": "高雄市三民區大豐一路26號"
+  },
+  {
+    "id": "mcw-taoyuan-minsheng-860",
+    "batch": "v2",
+    "name": "桃園-民生洗衣（衣美專家）",
+    "city": "桃園市",
+    "address": "桃園市民生路860號"
+  },
+  {
+    "id": "mcw-tainan-guanmiao-zhongzheng-1029",
+    "batch": "v2",
+    "name": "關廟店",
+    "city": "台南市",
+    "address": "台南市關廟區中正路1029號"
+  },
+  {
+    "id": "mcw-pingtung-defeng-142",
+    "batch": "v2",
+    "name": "屏東-德豐洗衣（寶朕盈）",
+    "city": "屏東縣",
+    "address": "屏東市德豐街142號"
+  },
+  {
+    "id": "mcw-pingtung-guangdongnan-73",
+    "batch": "v2",
+    "name": "屏東-廣東南洗衣",
+    "city": "屏東縣",
+    "address": "屏東市廣東南路73號"
+  },
+  {
+    "id": "mcw-kaohsiung-fengshan-fucheng-16",
+    "batch": "v2",
+    "name": "鳳山-福誠洗衣",
+    "city": "高雄市",
+    "address": "高雄市鳳山區福誠三街16號"
+  },
+  {
+    "id": "mcw-kaohsiung-daliao-fenglin-29",
+    "batch": "v2",
+    "name": "大寮-鳳林洗衣",
+    "city": "高雄市",
+    "address": "大寮區鳳林三路29號"
+  },
+  {
+    "id": "mcw-pingtung-wandan-zhongxing-111",
+    "batch": "v2",
+    "name": "萬丹-香社洗衣",
+    "city": "屏東縣",
+    "address": "屏東縣萬丹鄉中興路一段111號"
+  },
+  {
+    "id": "mcw-kaohsiung-daliao-feifan-19",
+    "batch": "v2",
+    "name": "大寮-非凡洗衣",
+    "city": "高雄市",
+    "address": "高雄市大寮區鳳林三路105巷24弄19號"
+  },
+  {
+    "id": "mcw-pingtung-dalian-32-4",
+    "batch": "v2",
+    "name": "屏東-大連洗衣",
+    "city": "屏東縣",
+    "address": "屏東市大連路32-4號"
+  },
+  {
+    "id": "mcw-kaohsiung-fengshan-wuying-228",
+    "batch": "v2",
+    "name": "鳳山-武營洗衣",
+    "city": "高雄市",
+    "address": "高雄市鳳山區武營路228號"
+  },
+  {
+    "id": "mcw-kaohsiung-qianzhen-xianming-19",
+    "batch": "v2",
+    "name": "前鎮-賢明（淨衣閣）",
+    "city": "高雄市",
+    "address": "高雄市前鎮區賢明路19號"
+  },
+  {
+    "id": "mcw-newtaipei-xizhi-baochang-1",
+    "batch": "v2",
+    "name": "保長店",
+    "city": "新北市",
+    "address": "新北市汐止區保長路19巷1號"
+  },
+  {
+    "id": "mcw-taichung-nantun-yongchun-18",
+    "batch": "v2",
+    "name": "台中嶺東店",
+    "city": "臺中市",
+    "address": "臺中市南屯區永春南路61巷18號"
   }
 ]

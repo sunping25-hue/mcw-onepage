@@ -7,7 +7,7 @@
 - GitHub repo：`sunping25-hue/mcw-onepage`
 - 功能分支：`issue-1-laundry-map`
 - 專案目錄：`laundry-map`
-- 兩筆使用者提供門市地址已隨程式首次建檔；後台後續編輯與刪除不會被啟動程序覆蓋。
+- 使用者提供的店名與地址會在各自的 bootstrap 紀錄尚未存在時建檔一次。原有兩家與後來的 13 家分開紀錄，後台修改與刪除不會被下一次啟動覆蓋或復活。
 - Render 範本：`laundry-map/render.yaml`。
 
 ## 建立 Render Web Service
@@ -27,7 +27,7 @@
 
 公開站已經在 Render **Free** 運行：`https://mcw-laundry-map.onrender.com`，分支 `issue-1-laundry-map`，根目錄 `laundry-map`，沒有掛載磁碟。`render.yaml` 只描述 free 方案，**不要**改回 `starter` 或加上付費磁碟。Free 的容器檔案系統會在休眠、重新部署後清空，所以 `DATA_DIR=/tmp/mcw-data` 不能當作永久資料庫。
 
-持久資料用環境變數接上 S3 相容物件儲存（例如 Cloudflare R2 的免費額度），或在已有持久目錄時用 `PERSIST_DRIVER=file`。沒有金鑰就不要填，程式會保持可啟動並在總部後台顯示缺少的變數名稱。本文件不提供、也不假設已經拿到金鑰。
+持久資料使用既有 Google 雲端硬碟，不使用 Cloudflare R2。`PERSIST_DRIVER=gdrive`。授權範圍只限 `https://www.googleapis.com/auth/drive.file`，程式只碰得到它自己建立的備份，不會列出或讀取雲端硬碟裡的其他私人檔案，也不會把備份設成公開。`file` 與 `s3` 仍是可選驅動。沒有權杖就不要填，程式會保持可啟動並顯示缺少的變數名稱。本文件不提供、也不假設已經拿到權杖。
 
 設定下列環境變數：
 
@@ -38,12 +38,13 @@
 | `GEOCODE_ON_START` | `true`（已由目前行程的定位日誌證實有在跑；失敗不會被記成成功） |
 | `ADMIN_USER` | 自訂總部帳號，例如 `hq` |
 | `ADMIN_PASSWORD` | 在平台安全填入，至少 16 字元 |
-| `PERSIST_DRIVER` | 有金鑰後設為 `s3`；只有持久目錄時設為 `file`；否則留空 |
-| `PERSIST_S3_ENDPOINT` | S3 相容端點，只在平台填入 |
-| `PERSIST_S3_BUCKET` | bucket 名稱 |
-| `PERSIST_S3_REGION` | R2 用 `auto` |
-| `PERSIST_S3_ACCESS_KEY_ID` | 只在平台填入 |
-| `PERSIST_S3_SECRET_ACCESS_KEY` | 只在平台填入 |
+| `PERSIST_DRIVER` | 接通後設為 `gdrive`；本機持久目錄可用 `file`；S3 只是可選 |
+| `GOOGLE_CLIENT_ID` | OAuth 用戶端編號，只在平台填入 |
+| `GOOGLE_CLIENT_SECRET` | 只在平台填入 |
+| `GOOGLE_REFRESH_TOKEN` | `npm run drive:auth` 印出的重新整理權杖，只在平台填入 |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | 只有共用雲端硬碟才改用服務帳戶；個人 Gmail 沒有服務帳戶配額 |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | 服務帳戶私鑰，只在平台填入 |
+| `GOOGLE_DRIVE_FOLDER_ID` | 可留空。個人雲端硬碟會自己建立私人資料夾 |
 
 Render 提供 `PORT`，程式會自動使用，不需要硬編碼。
 

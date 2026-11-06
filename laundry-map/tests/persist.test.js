@@ -136,7 +136,7 @@ test("S3-compatible client round-trips a snapshot and reports missing credential
     assert.equal((await persist.restoreInto(restored)).restored, true);
     const copy = openDb(restored);
     try {
-      assert.equal(copy.prepare("SELECT count(*) AS n FROM stores").get().n, 2);
+      assert.equal(copy.prepare("SELECT count(*) AS n FROM stores").get().n, 15);
     } finally {
       copy.close();
     }

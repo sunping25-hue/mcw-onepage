@@ -27,7 +27,7 @@ npm run dev
 
 `DATA_DIR` 預設 `./data`，自動執行 `migrations/` 內的冪等 SQL（含 bootstrap 記錄），保留 SQLite 與 uploads。正式部署必須使用永久儲存空間、定期備份，單一 Node instance；多 instance 需先改用共用資料庫／物件儲存。備份時停止寫入或使用 SQLite backup API，不能只任意複製正在寫入的主檔而忽略 WAL。
 
-`config/initial-stores.json` 保存使用者提供的兩筆地址。啟動時 `server/seed.js` 只首次建檔，並以 bootstrap 記錄確保後台修改不被覆蓋、刪除後不會因重啟復活。兩家門市的座標、電話、時段、費率、設備及照片均未推測；營業狀態標為待確認，也沒有誤配花蓮店照片。
+`config/initial-stores.json` 保存使用者提供的店名與地址。原有兩家用 `owner-provided-stores-v1` 首次建檔；2026-11-06 照片上的 13 家用 `owner-provided-stores-v2` 另外建檔一次。兩個紀錄都只插入尚未存在的列，不會覆蓋後台修改，也不會把已刪除的門市在重啟時加回來。電話、時段、費率、機台、照片與座標都留空。大寮鳳林的顯示地址維持照片上的「大寮區鳳林三路29號」，縣市篩選用高雄市。地址寫「屏東市」的三家，縣市篩選用屏東縣，地址原文不改。啟動時的自動定位仍只查原本兩家已確認地址，這 13 家不會因此出現圖標。
 
 所有 `/api/admin/*` 由伺服器驗證 session；登入密碼以 scrypt 比對，資料庫僅存 session token SHA-256，8 小時有效、登出撤銷。登入限流、SameSite=Strict / HttpOnly cookie、同來源 Origin 驗證、Helmet/CSP、Zod 白名單驗證。正式模式 cookie Secure，需 HTTPS。無開放註冊、無前端密碼或管理員金鑰。正式上線前應依總部需求評估 SSO/MFA、密碼輪替與稽核紀錄；目前為單一總部帳號 V1。
 
@@ -104,9 +104,9 @@ NODE_ENV=production DATA_DIR=/persistent/mcw npm start
 
 ## 雲端門市資料
 
-總部後台可維護店名、地址、電話、營業時間、座標、照片與機台配置，並可立即備份或還原。執行中的資料庫仍是 Node SQLite。`PERSIST_DRIVER=file` 會把一致備份寫到 `DATA_DIR` 外的目錄；`PERSIST_DRIVER=s3` 使用 S3 相容 API（含 Cloudflare R2 免費額度這類服務）的 SigV4 上傳。啟動時若本機還沒有 `mcw.sqlite`，會先還原最新且 SHA-256 相符的備份。備份不含登入工作階段。
+總部後台可維護店名、地址、電話、營業時間、座標、照片與機台配置。儲存、刪除、上傳和「立即備份」會把 SQLite 一致備份與照片送到所選驅動。正式選擇是既有 Google 雲端硬碟：`PERSIST_DRIVER=gdrive`，範圍只有 `drive.file`，備份放在應用程式自己建立的私人資料夾，不對網際網路公開。`file` 與 `s3` 仍可選。啟動時若本機沒有資料庫，會先還原 SHA-256 相符的備份；校驗失敗或傳輸失敗不會改掉已存在的本機資料，也不會自動覆寫雲端最新備份。備份不含登入工作階段。
 
-金鑰只從環境變數讀取。沒有設好驅動或金鑰時，網站仍可啟動，後台會顯示尚未設定與缺少的變數名稱，不會假裝已經連上雲端。目前這份程式沒有代填任何物件儲存金鑰。Render Free 的 `/tmp` 本身仍會在休眠或重新部署後清空。
+權杖只從環境變數讀取。沒有填入前，後台會顯示缺少的變數名稱，不代表已經接通。取得重新整理權杖可在有 client id／secret 的環境執行 `npm run drive:auth`。Render Free 的 `/tmp` 在休眠或重新部署後仍會清空。
 
 手機地圖與門市列表採不重疊配置：地圖模式的卡片位於地圖下方；切換「列表」可直接查看門市。瀏覽器驗收會檢查兩區的實際邊界，避免卡片再次遮住地圖。
 

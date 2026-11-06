@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { createBackup } from "./backup.js";
+import { createDriveStore, driveConfigFromEnv } from "./gdrive.js";
 import { s3Request } from "./s3.js";
 
 const TABLES = [
@@ -165,6 +166,7 @@ function recordEvent(db, action, outcome, detail) {
 
 export function createPersistence({ driver, store, root = null }) {
   let chain = Promise.resolve();
+  let blocked = false;
   const enqueue = (fn) => {
     const run = chain.then(fn, fn);
     chain = run.then(
@@ -174,10 +176,19 @@ export function createPersistence({ driver, store, root = null }) {
     return run;
   };
   return {
+    holdBackups() {
+      blocked = true;
+    },
+    backupBlocked() {
+      return blocked;
+    },
     configured: true,
     driver,
     missing: [],
-    async backupFrom(dataDir, db) {
+    async backupFrom(dataDir, db, { explicit = false } = {}) {
+      if (blocked && !explicit) {
+        throw Error("雲端還原失敗，已停止自動覆蓋雲端備份");
+      }
       return enqueue(async () => {
         if (root) assertOutside(dataDir, root);
         db.exec("PRAGMA wal_checkpoint(PASSIVE)");
@@ -237,11 +248,27 @@ export function createPersistence({ driver, store, root = null }) {
       }
       const snap = await downloadSnapshot(store);
       if (!snap) return { restored: false, reason: "no-snapshot" };
+      const staging = join(dataDir, ".restore-staging");
+      const placed = [];
       try {
-        mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-        copySnapshotFiles(snap.dir, dataDir, snap.latest.files);
+        rmSync(staging, { recursive: true, force: true });
+        mkdirSync(staging, { recursive: true, mode: 0o700 });
+        copySnapshotFiles(snap.dir, staging, snap.latest.files);
+        for (const file of snap.latest.files) {
+          const rel = safeRelative(file.path);
+          const dest = join(dataDir, rel);
+          if (existsSync(dest)) throw Error("本機檔案已存在，已停止還原");
+          mkdirSync(dirname(dest), { recursive: true, mode: 0o700 });
+          copyFileSync(join(staging, rel), dest);
+          chmodSync(dest, 0o600);
+          placed.push(dest);
+        }
         return { restored: true, snapshotId: snap.latest.snapshotId };
+      } catch (error) {
+        for (const path of placed) rmSync(path, { force: true });
+        throw error;
       } finally {
+        rmSync(staging, { recursive: true, force: true });
         rmSync(snap.dir, { recursive: true, force: true });
       }
     },
@@ -250,18 +277,27 @@ export function createPersistence({ driver, store, root = null }) {
         if (root) assertOutside(dataDir, root);
         const snap = await downloadSnapshot(store);
         if (!snap) throw Error("雲端還沒有可還原的備份");
+        const added = [];
         try {
-          replaceLiveRows(db, join(snap.dir, "mcw.sqlite"));
           for (const file of snap.latest.files) {
             if (!file.path.startsWith("uploads/")) continue;
-            const dest = join(dataDir, safeRelative(file.path));
-            mkdirSync(dirname(dest), { recursive: true, mode: 0o700 });
-            copyFileSync(join(snap.dir, file.path), dest);
-            chmodSync(dest, 0o600);
+            const rel = safeRelative(file.path);
+            const dest = join(dataDir, rel);
+            const incoming = readFileSync(join(snap.dir, rel));
+            if (existsSync(dest) && !readFileSync(dest).equals(incoming)) {
+              throw Error("本機照片與雲端備份不同，已停止還原");
+            }
+            if (!existsSync(dest)) {
+              mkdirSync(dirname(dest), { recursive: true, mode: 0o700 });
+              writeFileSync(dest, incoming, { mode: 0o600 });
+              added.push(dest);
+            }
           }
+          replaceLiveRows(db, join(snap.dir, "mcw.sqlite"));
           recordEvent(db, "restore", "success", snap.latest.snapshotId);
           return { restored: true, snapshotId: snap.latest.snapshotId };
         } catch (error) {
+          for (const path of added) rmSync(path, { force: true });
           try {
             recordEvent(db, "restore", "error", error.message);
           } catch {
@@ -305,6 +341,11 @@ export function persistenceFromEnv(env = process.env) {
     const root = resolve(env.PERSIST_FILE_DIR);
     mkdirSync(root, { recursive: true, mode: 0o700 });
     return createPersistence({ driver, root, store: createFileStore(root) });
+  }
+  if (driver === "gdrive" || driver === "google-drive") {
+    const drive = driveConfigFromEnv(env);
+    if (!drive.configured) return { configured: false, driver: "gdrive", missing: drive.missing };
+    return createPersistence({ driver: "gdrive", store: createDriveStore(drive.options) });
   }
   if (driver === "s3") {
     const names = [

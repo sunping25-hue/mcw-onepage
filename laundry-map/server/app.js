@@ -131,6 +131,7 @@ export function createApp({
         : null,
       remoteSnapshot: remote.remoteSnapshot || null,
       remoteError: remote.remoteError || "",
+      backupBlocked: Boolean(persist?.backupBlocked?.()),
     };
   }
   app.get("/api/stores", (req, res) =>
@@ -255,8 +256,14 @@ export function createApp({
         ...persistenceView(),
       });
     }
+    if (persist.backupBlocked?.() && req.body?.confirm !== "OVERWRITE") {
+      return res.status(409).json({
+        error: "雲端還原未成功，自動備份已暫停。確認覆寫雲端備份時才繼續。",
+        ...persistenceView(),
+      });
+    }
     try {
-      const result = await persist.backupFrom(dataDir, db);
+      const result = await persist.backupFrom(dataDir, db, { explicit: true });
       res.json({ ...result, ...persistenceView(await persist.describe()) });
     } catch (error) {
       res.status(502).json({ error: "雲端備份失敗：" + error.message });

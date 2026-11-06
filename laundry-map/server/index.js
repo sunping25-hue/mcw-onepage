@@ -17,7 +17,8 @@ if (persist.configured && !existsSync(join(dataDir, "mcw.sqlite"))) {
     if (restored.restored) console.log("已從雲端還原門市資料：" + restored.snapshotId);
     else console.log("雲端保存已設定，目前沒有可還原的備份（" + restored.reason + "）");
   } catch (error) {
-    console.error("雲端還原失敗，改用本機資料目錄：" + error.message);
+    persist.holdBackups?.();
+    console.error("雲端還原失敗，已停止自動覆蓋雲端備份：" + error.message);
   }
 } else if (!persist.configured && persist.driver !== "none") {
   console.error(

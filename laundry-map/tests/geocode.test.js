@@ -107,6 +107,10 @@ test("structured lookup saves one exact house and does not retry a recorded fail
       0,
     );
     assert.match(headers[0]["User-Agent"], /MCW-Laundry-Map/);
+    assert.equal(
+      ctx.db.prepare("SELECT count(*) AS n FROM stores WHERE json_extract(document,'$.lat') IS NULL").get().n,
+      14,
+    );
     await locateKnownStores(ctx.db, {
       pause: async () => {},
       fetcher: async () => {

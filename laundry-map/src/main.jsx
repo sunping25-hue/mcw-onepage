@@ -1121,7 +1121,7 @@ function Admin() {
         <p>
           {cloud?.configured
             ? `雲端保存已連接（${cloud.driver}）。最近備份：${cloud.remoteSnapshot?.createdAt || cloud.last?.attemptedAt || "尚無"}。`
-            : "尚未設定雲端保存。Render 免費方案的本機資料會在重新啟動後消失；設定 PERSIST_* 後，總部儲存的店名、地址、電話、機台與照片會寫入雲端。"}
+            : "尚未接通雲端保存。正式環境使用既有 Google 雲端硬碟（PERSIST_DRIVER=gdrive）；檔案與 S3 只是可選驅動。金鑰尚未填入前，Render 免費方案的本機資料會在重新啟動後消失。"}
         </p>
         {!!cloud?.missing?.length && (
           <p role="status">尚缺環境變數：{cloud.missing.join("、")}</p>
@@ -1134,9 +1134,16 @@ function Admin() {
             type="button"
             onClick={() =>
               run(async () => {
+                if (
+                  cloud?.backupBlocked &&
+                  !confirm("雲端還原未成功。確定要用目前資料覆寫雲端備份？")
+                )
+                  return;
                 const result = await api("/admin/persistence/backup", {
                   method: "POST",
-                  body: "{}",
+                  body: JSON.stringify(
+                    cloud?.backupBlocked ? { confirm: "OVERWRITE" } : {},
+                  ),
                 });
                 setCloud(result);
                 setMessage("雲端備份完成");

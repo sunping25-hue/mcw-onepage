@@ -1,6 +1,7 @@
 # Free web service only. Do not add a disk and do not change plan to starter.
 # The live service is already on Render Free without a disk. This file is not applied automatically.
-# Cloud persistence uses PERSIST_* environment variables set in the dashboard, not a paid disk.
+# Cloud persistence is optional Google Drive (PERSIST_DRIVER=gdrive) set in the dashboard.
+# Do not put OAuth tokens or service-account keys in this file. No paid disk.
 services:
   - type: web
     name: mcw-laundry-map
